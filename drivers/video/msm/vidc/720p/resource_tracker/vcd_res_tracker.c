@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2012, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -39,6 +39,8 @@ static unsigned int axi_clk_freq_table_dec[2] = {
 };
 
 static struct res_trk_context resource_context;
+
+static bool is_encoding = false;
 
 #define VIDC_BOOT_FW			"vidc_720p_command_control.fw"
 #define VIDC_MPG4_DEC_FW		"vidc_720p_mp4_dec_mc.fw"
@@ -127,12 +129,15 @@ static u32 res_trk_disable_videocore(void)
 	clk_put(resource_context.hclk_div2);
 	clk_put(resource_context.hclk);
 	clk_put(resource_context.pclk);
-
-	rc = regulator_disable(resource_context.regulator);
-	if (rc) {
-		VCDRES_MSG_ERROR("\n regulator disable failed %d\n", rc);
-		mutex_unlock(&resource_context.lock);
-		return false;
+/* HTC_START - Check regulator pointer */
+	if (!IS_ERR(resource_context.regulator)) {
+		rc = regulator_disable(resource_context.regulator);
+		if (rc) {
+			VCDRES_MSG_ERROR("\n regulator disable failed %d\n", rc);
+			mutex_unlock(&resource_context.lock);
+			return false;
+		}
+/* HTC_END */
 	}
 
 	resource_context.hclk_div2 = NULL;
@@ -266,16 +271,18 @@ static u32 res_trk_enable_videocore(void)
 	mutex_lock(&resource_context.lock);
 	if (!resource_context.rail_enabled) {
 		int rc = -1;
-
-		rc = regulator_enable(resource_context.regulator);
-		if (rc) {
-			VCDRES_MSG_ERROR("%s(): regulator_enable failed %d\n",
-							 __func__, rc);
-			goto bail_out;
+/* HTC_START - Check regulator pointer */
+		if (!IS_ERR(resource_context.regulator)) {
+			rc = regulator_enable(resource_context.regulator);
+			if (rc) {
+				VCDRES_MSG_ERROR("%s(): regulator_enable failed %d\n",
+								 __func__, rc);
+				goto bail_out;
+			}
+			VCDRES_MSG_LOW("%s(): regulator enable Success %d\n",
+								__func__, rc);
 		}
-		VCDRES_MSG_LOW("%s(): regulator enable Success %d\n",
-							__func__, rc);
-
+/* HTC_END */
 		resource_context.pclk = clk_get(resource_context.device,
 			"iface_clk");
 
@@ -710,7 +717,7 @@ void res_trk_init(struct device *device, u32 irq)
 			resource_context.vidc_platform_data->memtype;
 		VCDRES_MSG_LOW("%s(): resource_context.memtype = 0x%x",
 			__func__, (u32)resource_context.memtype);
-		if (resource_context.vidc_platform_data->enable_ion) {
+		if (res_trk_get_enable_ion()) {
 			resource_context.res_ion_client =
 				res_trk_create_ion_client();
 			if (!(resource_context.res_ion_client)) {
@@ -720,9 +727,6 @@ void res_trk_init(struct device *device, u32 irq)
 			}
 			VCDRES_MSG_LOW("%s(): ion_client = 0x%x", __func__,
 				(u32)resource_context.res_ion_client);
-		} else {
-			VCDRES_MSG_ERROR("%s(): ION not disabled\n",
-					__func__);
 		}
 	} else {
 		resource_context.memtype = -1;
@@ -737,7 +741,7 @@ u32 res_trk_get_core_type(void){
 
 u32 res_trk_get_enable_ion(void)
 {
-	if (resource_context.vidc_platform_data->enable_ion)
+	if (resource_context.vidc_platform_data->enable_ion && !is_encoding)
 		return 1;
 	else
 		return 0;
@@ -750,7 +754,13 @@ struct ion_client *res_trk_get_ion_client(void)
 
 u32 res_trk_get_mem_type(void)
 {
-	u32 mem_type = ION_HEAP(resource_context.memtype);
+	u32 mem_type;
+
+	if (res_trk_get_enable_ion())
+		mem_type = ION_HEAP(resource_context.memtype);
+	else
+		mem_type = resource_context.vidc_platform_data->memtype_pmem;
+
 	return mem_type;
 }
 
@@ -760,6 +770,11 @@ void res_trk_set_mem_type(enum ddl_mem_area mem_type)
 }
 
 u32 res_trk_get_disable_fullhd(void)
+{
+	return 0;
+}
+
+u32 res_trk_get_ion_flags(void)
 {
 	return 0;
 }
@@ -798,4 +813,8 @@ u32 res_trk_is_cp_enabled(void)
 		return 1;
 	else
 		return 0;
+}
+void res_trk_set_is_encoding(bool encoding)
+{
+	is_encoding = encoding;
 }

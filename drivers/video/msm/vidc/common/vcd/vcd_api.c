@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2012, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -980,6 +980,7 @@ struct ion_client *vcd_get_ion_client(void)
 }
 EXPORT_SYMBOL(vcd_get_ion_client);
 
-
-
-
+void vcd_set_is_encoding(bool encoding)
+{
+	res_trk_set_is_encoding(encoding);
+}

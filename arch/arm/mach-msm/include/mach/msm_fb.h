@@ -196,7 +196,6 @@ int msm_fb_v4l2_update(void *par,
 	unsigned long srcp1_addr, unsigned long srcp1_size,
 	unsigned long srcp2_addr, unsigned long srcp2_size);
 
-#ifdef CONFIG_MACH_HTC
 /*
  * This is used to communicate event between msm_fb, mddi, mddi_client,
  * and board.
@@ -216,6 +215,5 @@ extern int display_notifier_call_chain(unsigned long val, void *data);
 	{ .notifier_call = fn, .priority = pri };       \
 	register_display_notifier(&fn##_nb);		\
 }
-#endif
 
 #endif

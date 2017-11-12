@@ -28,7 +28,11 @@
 #include <mach/board.h>
 #include <asm/mach-types.h>
 //#include <mach/board_htc.h>
-#include <mach/msm_fb-7x30.h> /*to register display notifier */
+#ifdef CONFIG_FB_MSM_NEW
+	#include <mach/msm_fb.h> /*to register display notifier */
+#else
+	#include <mach/msm_fb-7x30.h>
+#endif
 #include <mach/htc_battery.h>
 #include <linux/rtc.h>
 #include <linux/workqueue.h>

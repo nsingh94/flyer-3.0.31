@@ -330,13 +330,20 @@ enum msm_mdp_hw_revision {
 struct msm_panel_common_pdata {
 	uintptr_t hw_revision_addr;
 	int gpio;
+	bool bl_lock;
+	spinlock_t bl_spinlock;
 	int (*backlight_level)(int level, int max, int min);
 	int (*pmic_backlight)(int level);
+	int (*rotate_panel)(void);
+	int (*backlight) (int level, int mode);
 	int (*panel_num)(void);
 	void (*panel_config_gpio)(int);
 	int (*vga_switch)(int select_vga);
 	int *gpio_num;
 	u32 mdp_max_clk;
+	u32 mdp_max_bw;
+	u32 mdp_bw_ab_factor;
+	u32 mdp_bw_ib_factor;
 #ifdef CONFIG_MSM_BUS_SCALING
 	struct msm_bus_scale_pdata *mdp_bus_scale_table;
 #endif
@@ -345,10 +352,10 @@ struct msm_panel_common_pdata {
 	u32 ov1_wb_size;  /* overlay1 writeback size */
 	u32 mem_hid;
 	char cont_splash_enabled;
+	u32 splash_screen_addr;
+	u32 splash_screen_size;
 	char mdp_iommu_split_domain;
 };
-
-
 
 struct lcdc_platform_data {
 	int (*lcdc_gpio_config)(int on);
@@ -376,9 +383,9 @@ struct mddi_platform_data {
 struct mipi_dsi_platform_data {
 	int vsync_gpio;
 	int (*dsi_power_save)(int on);
+	int (*esd_fixup)(uint32_t mfd_data);
 	int (*dsi_client_reset)(void);
 	int (*get_lane_config)(void);
-	char (*splash_is_enabled)(void);
 	int target_type;
 };
 
@@ -387,6 +394,8 @@ enum mipi_dsi_3d_ctrl {
 	FPGA_SPI_INTF,
 };
 
+#ifndef CONFIG_ARCH_MSM8X60
+#ifndef CONFIG_ARCH_MSM7X27A
 /* DSI PHY configuration */
 struct mipi_dsi_phy_ctrl {
 	uint32_t regulator[5];
@@ -395,24 +404,21 @@ struct mipi_dsi_phy_ctrl {
 	uint32_t strength[4];
 	uint32_t pll[21];
 };
+#endif
+#endif
 
 struct mipi_dsi_panel_platform_data {
 	int fpga_ctrl_mode;
 	int fpga_3d_config_addr;
 	int *gpio;
 	struct mipi_dsi_phy_ctrl *phy_ctrl_settings;
-	void (*dsi_pwm_cfg)(void);
-	char dlane_swap;
-};
-
-struct msm_wfd_platform_data {
-	char (*wfd_check_mdp_iommu_split)(void);
 };
 
 #define PANEL_NAME_MAX_LEN 50
 struct msm_fb_platform_data {
 	int (*detect_client)(const char *name);
 	int mddi_prescan;
+	unsigned char ext_resolution;
 	int (*allow_set_offset)(void);
 	char prim_panel_name[PANEL_NAME_MAX_LEN];
 	char ext_panel_name[PANEL_NAME_MAX_LEN];
@@ -425,11 +431,10 @@ struct msm_hdmi_platform_data {
 	int (*enable_5v)(int on);
 	int (*core_power)(int on, int show);
 	int (*cec_power)(int on);
-	int (*panel_power)(int on);
-	int (*gpio_config)(int on);
 	int (*init_irq)(void);
 	bool (*check_hdcp_hw_support)(void);
 };
+
 
 struct msm_i2c_platform_data {
 	int clk_freq;
@@ -460,7 +465,8 @@ struct msm_vidc_platform_data {
 	struct msm_bus_scale_pdata *vidc_bus_client_pdata;
 #endif
 	int disable_turbo;
-        int cont_mode_dpb_count;
+	int cont_mode_dpb_count;
+	int memtype_pmem;
 };
 
 #if defined(CONFIG_USB_PEHCI_HCD) || defined(CONFIG_USB_PEHCI_HCD_MODULE)

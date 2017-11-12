@@ -36,6 +36,11 @@
 #include <linux/android_pmem.h>
 #include <mach/msm_iomap.h>
 #include <mach/socinfo.h>
+#include <linux/sched.h>
+#include <linux/of_fdt.h>
+
+/* fixme */
+#include <asm/tlbflush.h>
 #include <../../mm/mm.h>
 #include <linux/fmem.h>
 
@@ -115,7 +120,7 @@ void invalidate_caches(unsigned long vstart,
 	outer_inv_range(pstart, pstart + length);
 }
 
-void *alloc_bootmem_aligned(unsigned long size, unsigned long alignment)
+void * __init alloc_bootmem_aligned(unsigned long size, unsigned long alignment)
 {
 	void *unused_addr = NULL;
 	unsigned long addr, tmp_size, unused_size;
@@ -141,29 +146,6 @@ void *alloc_bootmem_aligned(unsigned long size, unsigned long alignment)
 		free_bootmem(__pa(unused_addr), unused_size);
 
 	return (void *)addr;
-}
-
-int (*change_memory_power)(u64, u64, int);
-
-int platform_physical_remove_pages(u64 start, u64 size)
-{
-	if (!change_memory_power)
-		return 0;
-	return change_memory_power(start, size, MEMORY_DEEP_POWERDOWN);
-}
-
-int platform_physical_active_pages(u64 start, u64 size)
-{
-	if (!change_memory_power)
-		return 0;
-	return change_memory_power(start, size, MEMORY_ACTIVE);
-}
-
-int platform_physical_low_power_pages(u64 start, u64 size)
-{
-	if (!change_memory_power)
-		return 0;
-	return change_memory_power(start, size, MEMORY_SELF_REFRESH);
 }
 
 char *memtype_name[] = {
@@ -286,6 +268,8 @@ static void __init reserve_memory_for_mempools(void)
 			if (size >= mt->size) {
 				size = stable_size(mb,
 					reserve_info->low_unstable_address);
+				if (!size)
+					continue;
 				/* mt->size may be larger than size, all this
 				 * means is that we are carving the memory pool
 				 * out of multiple contiguous memory banks.
@@ -297,27 +281,6 @@ static void __init reserve_memory_for_mempools(void)
 			}
 		}
 	}
-}
-
-unsigned long __init reserve_memory_for_fmem(unsigned long fmem_size, 
-						unsigned long align)
-{
-	struct membank *mb;
-	int ret;
-	unsigned long fmem_phys;
-
-	if (!fmem_size)
-		return 0;
-
-	mb = &meminfo.bank[meminfo.nr_banks - 1];
-	
-	fmem_phys = mb->start + (mb->size - fmem_size);
-	fmem_phys = ALIGN(fmem_phys-align+1, align);
-	ret = memblock_remove(fmem_phys, fmem_size);
-	BUG_ON(ret);
-
-	pr_info("fmem start %lx size %lx\n", fmem_phys, fmem_size);
-	return fmem_phys;
 }
 
 static void __init initialize_mempools(void)
@@ -337,6 +300,8 @@ static void __init initialize_mempools(void)
 	}
 }
 
+#define  MAX_FIXED_AREA_SIZE 0x11000000
+
 void __init msm_reserve(void)
 {
 	unsigned long msm_fixed_area_size;
@@ -348,7 +313,10 @@ void __init msm_reserve(void)
 	msm_fixed_area_size = reserve_info->fixed_area_size;
 	msm_fixed_area_start = reserve_info->fixed_area_start;
 	if (msm_fixed_area_size)
-		reserve_info->low_unstable_address = msm_fixed_area_start;
+		if (msm_fixed_area_start > reserve_info->low_unstable_address
+			- MAX_FIXED_AREA_SIZE)
+			reserve_info->low_unstable_address =
+			msm_fixed_area_start;
 
 	calculate_reserve_limits();
 	adjust_reserve_sizes();
@@ -455,4 +423,25 @@ int request_fmem_c_region(void *unused)
 int release_fmem_c_region(void *unused)
 {
 	return fmem_set_state(FMEM_T_STATE);
+}
+
+static char * const memtype_names[] = {
+	[MEMTYPE_SMI_KERNEL] = "SMI_KERNEL",
+	[MEMTYPE_SMI]	= "SMI",
+	[MEMTYPE_EBI0] = "EBI0",
+	[MEMTYPE_EBI1] = "EBI1",
+};
+
+int msm_get_memory_type_from_name(const char *memtype_name)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(memtype_names); i++) {
+		if (memtype_names[i] &&
+		    strcmp(memtype_name, memtype_names[i]) == 0)
+			return i;
+	}
+
+	pr_err("Could not find memory type %s\n", memtype_name);
+	return -EINVAL;
 }

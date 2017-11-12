@@ -17,7 +17,7 @@
 #include <linux/platform_device.h>
 #include <linux/msm_rotator.h>
 #include <linux/dma-mapping.h>
-#include <linux/msm_kgsl.h>
+#include <mach/kgsl.h>
 #include <linux/android_pmem.h>
 #include <linux/regulator/machine.h>
 #include <linux/init.h>
@@ -26,7 +26,7 @@
 #include <mach/dma.h>
 #include <mach/board.h>
 #include <asm/clkdev.h>
-#include <linux/ion.h>
+#include <linux/msm_ion.h>
 #include "devices.h"
 #include "gpio_hw.h"
 #include "footswitch.h"
@@ -122,7 +122,7 @@ struct platform_device msm_device_mdp = {
 	.num_resources = ARRAY_SIZE(resources_mdp),
 	.resource = resources_mdp,
 };
-#endif
+#endif /* CONFIG_FB_MSM_NEW */
 #endif
 
 /* EBI THERMAL DRIVER */
@@ -899,9 +899,9 @@ static struct resource msm_vidc_720p_resources[] = {
 
 struct msm_vidc_platform_data vidc_platform_data = {
 	.memtype = ION_CAMERA_HEAP_ID,
+	.memtype_pmem = MEMTYPE_EBI0,
 	.enable_ion = 1,
-	.disable_dmx = 0,
-	.cont_mode_dpb_count = 8
+	.disable_dmx = 0
 };
 
 struct platform_device msm_device_vidc_720p = {
@@ -1132,7 +1132,6 @@ static struct msm_rotator_platform_data rotator_pdata = {
 	.number_of_clocks = ARRAY_SIZE(rotator_clocks),
 	.hardware_version_number = 0x1000303,
 	.rotator_clks = rotator_clocks,
-	.regulator_name = "fs_rot",
 };
 
 struct platform_device msm_rotator_device = {
@@ -1290,13 +1289,13 @@ struct platform_device msm_kgsl_2d0 = {
 };
 
 struct platform_device *msm_footswitch_devices[] = {
-	FS_PCOM(FS_GFX2D0, "fs_gfx2d0"),
-	FS_PCOM(FS_GFX3D,  "fs_gfx3d"),
-	FS_PCOM(FS_MDP,    "fs_mdp"),
-	FS_PCOM(FS_MFC,    "fs_mfc"),
-	FS_PCOM(FS_ROT,    "fs_rot"),
-	FS_PCOM(FS_VFE,    "fs_vfe"),
-	FS_PCOM(FS_VPE,    "fs_vpe"),
+	FS_PCOM(FS_GFX2D0, "vdd", "kgsl-2d0.0"),
+	FS_PCOM(FS_GFX3D,  "vdd", "kgsl-3d0.0"),
+	FS_PCOM(FS_MDP,    "vdd", "mdp.0"),
+	FS_PCOM(FS_MFC,    "fs_mfc",    NULL),
+	FS_PCOM(FS_ROT,    "vdd",  "msm_rotator.0"),
+	FS_PCOM(FS_VFE,    "fs_vfe",    NULL),
+	FS_PCOM(FS_VPE,    "fs_vpe",    NULL),
 };
 unsigned msm_num_footswitch_devices = ARRAY_SIZE(msm_footswitch_devices);
 
