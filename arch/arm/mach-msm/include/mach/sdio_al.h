@@ -15,6 +15,10 @@
  * SDIO-Abstraction-Layer API.
  */
 
+#if defined(CONFIG_MACH_HTC) && defined(CONFIG_ARCH_MSM7X30_SMD)
+#include <mach/7x30-smd/sdio_al.h>
+#endif
+
 #ifndef __SDIO_AL__
 #define __SDIO_AL__
 

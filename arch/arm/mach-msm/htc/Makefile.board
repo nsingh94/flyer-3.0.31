@@ -1,0 +1,6 @@
+#
+# Makefile for the HTC board
+#
+
+# FLYER
+obj-$(CONFIG_MACH_FLYER) += flyer/

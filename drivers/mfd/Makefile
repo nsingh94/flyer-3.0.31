@@ -43,7 +43,11 @@ obj-$(CONFIG_TWL4030_MADC)      += twl4030-madc.o
 obj-$(CONFIG_TWL4030_POWER)    += twl4030-power.o
 obj-$(CONFIG_MFD_TWL4030_AUDIO)	+= twl4030-audio.o
 
+ifdef CONFIG_MACH_HTC
+obj-$(CONFIG_MARIMBA_CORE)	+= marimba-core_htc.o
+else
 obj-$(CONFIG_MARIMBA_CORE)	+= marimba-core.o
+endif
 obj-$(CONFIG_MARIMBA_TSADC)	+= marimba-tsadc.o
 obj-$(CONFIG_TPS65023)		+= tps65023.o
 
@@ -52,7 +56,11 @@ obj-$(CONFIG_TIMPANI_CODEC)	+= timpani-codec.o
 ifdef CONFIG_TIMPANI_CODEC
 obj-$(CONFIG_TIMPANI_CODEC) += msm-adie-codec.o
 else ifdef CONFIG_MARIMBA_CODEC
+ifdef CONFIG_MACH_HTC
+obj-$(CONFIG_MARIMBA_CODEC) += msm-adie-codec_htc.o
+else
 obj-$(CONFIG_MARIMBA_CODEC) += msm-adie-codec.o
+endif
 endif
 
 obj-$(CONFIG_TWL6030_PWM)	+= twl6030-pwm.o
@@ -109,16 +117,24 @@ obj-$(CONFIG_MFD_WL1273_CORE)	+= wl1273-core.o
 obj-$(CONFIG_MFD_CS5535)	+= cs5535-mfd.o
 obj-$(CONFIG_MFD_OMAP_USB_HOST)	+= omap-usb-host.o
 obj-$(CONFIG_MFD_PM8921_CORE) 	+= pm8921-core.o
-obj-$(CONFIG_MFD_PM8XXX_IRQ) 	+= pm8xxx-irq.o
+#obj-$(CONFIG_MFD_PM8XXX_IRQ) 	+= pm8xxx-irq.o
 obj-$(CONFIG_MFD_TPS65910)	+= tps65910.o tps65910-irq.o
 obj-$(CONFIG_TPS65911_COMPARATOR)	+= tps65911-comparator.o
+ifdef CONFIG_MACH_HTC
+obj-$(CONFIG_PMIC8058)		+= pmic8058_htc.o
+else
 obj-$(CONFIG_PMIC8058)		+= pmic8058.o
+endif
 obj-$(CONFIG_PMIC8901)		+= pmic8901.o
 obj-$(CONFIG_MFD_PM8921_CORE) 	+= pm8921-core.o
 obj-$(CONFIG_MFD_PM8821_CORE) 	+= pm8821-core.o
 obj-$(CONFIG_MFD_PM8018_CORE) 	+= pm8018-core.o
 obj-$(CONFIG_MFD_PM8038_CORE) 	+= pm8038-core.o
+ifdef CONFIG_MACH_HTC
+obj-$(CONFIG_MFD_PM8XXX_IRQ) 	+= pm8xxx-irq_htc.o
+else
 obj-$(CONFIG_MFD_PM8XXX_IRQ) 	+= pm8xxx-irq.o
+endif
 obj-$(CONFIG_MFD_PM8XXX_DEBUG) 	+= pm8xxx-debug.o
 obj-$(CONFIG_MFD_PM8XXX_PWM) 	+= pm8xxx-pwm.o
 obj-$(CONFIG_MFD_PM8XXX_MISC) 	+= pm8xxx-misc.o

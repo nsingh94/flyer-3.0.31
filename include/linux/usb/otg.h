@@ -143,6 +143,9 @@ struct otg_transceiver {
 	int	(*send_event)(struct otg_transceiver *otg,
 			enum usb_otg_event event);
 
+#ifdef CONFIG_MACH_HTC
+	void	(*notify_charger)(int connect_type);
+#endif
 };
 
 

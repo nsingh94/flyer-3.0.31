@@ -1,4 +1,4 @@
-/* Copyright (c) 2009-2011, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2009-2010, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -8,6 +8,11 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+ * 02110-1301, USA.
  *
  */
 #include <linux/module.h>
@@ -60,7 +65,6 @@ static void lpa_enable_codec(struct lpa_drv *lpa, bool enable)
 		(val & ~LPA_OBUF_CODEC_CODEC_INTF_EN_BMSK);
 	val |= LPA_OBUF_CODEC_LOAD_BMSK;
 	LPA_REG_WRITEL(lpa, val, LPA_OBUF_CODEC);
-	mb();
 }
 
 static void lpa_reset(struct lpa_drv *lpa)
@@ -82,7 +86,6 @@ static void lpa_reset(struct lpa_drv *lpa)
 	} while (!(status & LPA_OBUF_STATUS_RESET_DONE));
 
 	LPA_REG_WRITEL(lpa, LPA_OBUF_ACK_RESET_DONE_BMSK, LPA_OBUF_ACK);
-	mb();
 	clk_disable(adsp_clk);
 	clk_put(adsp_clk);
 error:
@@ -340,7 +343,7 @@ struct lpa_drv *lpa_get(void)
 	}
 
 	lpa_enable_interrupt(ret_lpa, ret_lpa->dsp_proc_id);
-	mb();
+
 	the_lpa_state.assigned++;
 error:
 	mutex_unlock(&the_lpa_state.lpa_lock);
@@ -455,7 +458,6 @@ int lpa_cmd_codec_config(struct lpa_drv *lpa,
 	LPA_OBUF_CODEC_INTF_BMSK;
 
 	LPA_REG_WRITEL(lpa, val, LPA_OBUF_CODEC);
-	mb();
 
 	return 0;
 error:
@@ -527,7 +529,6 @@ int lpa_cmd_enable_codec(struct lpa_drv *lpa, bool enable)
 		} else
 			MM_ERR("LPA codec is already disable\n");
 	}
-	mb();
 	return 0;
 }
 EXPORT_SYMBOL(lpa_cmd_enable_codec);
@@ -535,6 +536,7 @@ EXPORT_SYMBOL(lpa_cmd_enable_codec);
 static int lpa_probe(struct platform_device *pdev)
 {
 	int rc = 0;
+	int diff;
 	struct resource *mem_src;
 	struct msm_lpa_platform_data *pdata;
 
@@ -554,8 +556,9 @@ static int lpa_probe(struct platform_device *pdev)
 	}
 
 	pdata = pdev->dev.platform_data;
+	diff = mem_src->end -mem_src->start;
 	the_lpa_state.lpa_drv.baseaddr = ioremap(mem_src->start,
-	(mem_src->end - mem_src->start) + 1);
+	diff + 1);
 	if (!the_lpa_state.lpa_drv.baseaddr) {
 		rc = -ENOMEM;
 		goto error;

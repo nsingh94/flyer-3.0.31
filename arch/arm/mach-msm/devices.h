@@ -29,6 +29,11 @@ void __init msm_rotator_update_bus_vectors(unsigned int xres,
 	unsigned int yres);
 void __init msm_rotator_set_split_iommu_domain(void);
 
+#ifdef CONFIG_MACH_HTC
+void config_gpio_table_dbg(uint32_t *, int, char *, int);
+#define config_gpio_table(a, b) config_gpio_table_dbg(a, b, __FILE__, __LINE__)
+#endif
+
 extern struct platform_device asoc_msm_pcm;
 extern struct platform_device asoc_msm_dai0;
 extern struct platform_device asoc_msm_dai1;

@@ -1,13 +1,29 @@
-/* Copyright (c) 2009-2011, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2009-2010, Code Aurora Forum. All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 and
- * only version 2 as published by the Free Software Foundation.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ *     * Redistributions of source code must retain the above copyright
+ *       notice, this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above
+ *       copyright notice, this list of conditions and the following
+ *       disclaimer in the documentation and/or other materials provided
+ *       with the distribution.
+ *     * Neither the name of Code Aurora Forum, Inc. nor the names of its
+ *       contributors may be used to endorse or promote products derived
+ *       from this software without specific prior written permission.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS
+ * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+ * BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+ * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+ * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
 #ifndef __MACH_QDSP5_V2_QDSP5AFECMDI_H
@@ -75,18 +91,7 @@ struct afe_cmd_fm_volume_config{
 	uint16_t reserved;
 } __attribute__ ((packed));
 
-#define AFE_CMD_FM_CALIBRATION_GAIN_CMD	0x11
-#define AFE_CMD_FM_CALIBRATION_GAIN_LEN \
-	sizeof(struct afe_cmd_fm_calibgain_config)
-
-struct afe_cmd_fm_calibgain_config{
-	uint16_t cmd_id;
-	uint16_t device_id;
-	uint16_t calibration_gain;
-} __attribute__ ((packed));
-
 #define AFE_CMD_LOOPBACK	0xD
-#define AFE_CMD_EXT_LOOPBACK	0xE
 #define AFE_CMD_LOOPBACK_LEN sizeof(struct afe_cmd_loopback)
 #define AFE_LOOPBACK_ENABLE_COMMAND 0xFFFF
 #define AFE_LOOPBACK_DISABLE_COMMAND 0x0000
@@ -96,30 +101,5 @@ struct afe_cmd_loopback {
 	uint16_t enable_flag;
 	uint16_t reserved[2];
 } __attribute__ ((packed));
-
-struct afe_cmd_ext_loopback {
-	uint16_t cmd_id;
-	uint16_t enable_flag;
-	uint16_t source_id;
-	uint16_t dst_id;
-	uint16_t reserved[2];
-} __packed;
-
-#define AFE_CMD_CFG_RMC_PARAMS 0x12
-#define AFE_CMD_CFG_RMC_LEN \
-	sizeof(struct afe_cmd_cfg_rmc)
-
-struct afe_cmd_cfg_rmc {
-	unsigned short cmd_id;
-	signed short   rmc_mode;
-	unsigned short rmc_ipw_length_ms;
-	unsigned short rmc_peak_length_ms;
-	unsigned short rmc_init_pulse_length_ms;
-	unsigned short rmc_total_int_length_ms;
-	unsigned short rmc_rampupdn_length_ms;
-	unsigned short rmc_delay_length_ms;
-	unsigned short rmc_detect_start_threshdb;
-	signed short   rmc_init_pulse_threshdb;
-}  __attribute__((packed));
 
 #endif

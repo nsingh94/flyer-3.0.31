@@ -41,6 +41,90 @@
 #include <mach/dal_axi.h>
 #include <mach/msm_memtypes.h>
 
+#ifdef CONFIG_MACH_HTC
+void config_gpio_table_dbg(uint32_t *table, int len, char *file, int line)
+{
+	int n, rc;
+	for (n = 0; n < len; n++) {
+		rc = gpio_tlmm_config(table[n], GPIO_CFG_ENABLE);
+		if (rc) {
+			pr_err("[K] %s: gpio_tlmm_config(%#x)[%d]=%d (%s:%d)\n",
+			       __func__, table[n], n, rc, file, line);
+			break;
+		}
+	}
+}
+
+#ifndef CONFIG_FB_MSM_NEW
+static struct resource resources_mddi0[] = {
+	{
+		.start	= MSM_PMDH_PHYS,
+		.end	= MSM_PMDH_PHYS + MSM_PMDH_SIZE - 1,
+		.flags	= IORESOURCE_MEM,
+	},
+	{
+		.start	= INT_MDDI_PRI,
+		.end	= INT_MDDI_PRI,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+
+static struct resource resources_mddi1[] = {
+	{
+		.start	= MSM_EMDH_PHYS,
+		.end	= MSM_EMDH_PHYS + MSM_EMDH_SIZE - 1,
+		.flags	= IORESOURCE_MEM,
+	},
+	{
+		.start	= INT_MDDI_EXT,
+		.end	= INT_MDDI_EXT,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device msm_device_mddi0 = {
+	.name = "msm_mddi",
+	.id = 0,
+	.num_resources = ARRAY_SIZE(resources_mddi0),
+	.resource = resources_mddi0,
+	.dev            = {
+		.coherent_dma_mask      = 0xffffffff,
+	},
+};
+
+struct platform_device msm_device_mddi1 = {
+	.name = "msm_mddi",
+	.id = 1,
+	.num_resources = ARRAY_SIZE(resources_mddi1),
+	.resource = resources_mddi1,
+	.dev            = {
+		.coherent_dma_mask      = 0xffffffff,
+	}
+};
+
+static struct resource resources_mdp[] = {
+	{
+		.start	= MSM_MDP_PHYS,
+		.end	= MSM_MDP_PHYS + MSM_MDP_SIZE - 1,
+		.name	= "mdp",
+		.flags	= IORESOURCE_MEM
+	},
+	{
+		.start	= INT_MDP,
+		.end	= INT_MDP,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device msm_device_mdp = {
+	.name = "msm_mdp",
+	.id = 0,
+	.num_resources = ARRAY_SIZE(resources_mdp),
+	.resource = resources_mdp,
+};
+#endif
+#endif
+
 /* EBI THERMAL DRIVER */
 static struct resource msm_ebi0_thermal_resources[] = {
 	{
@@ -98,7 +182,9 @@ static struct resource resources_uart2[] = {
 		.start	= MSM_UART2_PHYS,
 		.end	= MSM_UART2_PHYS + MSM_UART2_SIZE - 1,
 		.flags	= IORESOURCE_MEM,
+#ifndef CONFIG_MACH_HTC
 		.name  = "uart_resource"
+#endif
 	},
 };
 
@@ -124,14 +210,22 @@ struct platform_device msm_device_uart1 = {
 
 struct platform_device msm_device_uart2 = {
 	.name	= "msm_serial",
+#ifdef CONFIG_MACH_HTC
+	.id	= 0,
+#else
 	.id	= 1,
+#endif
 	.num_resources	= ARRAY_SIZE(resources_uart2),
 	.resource	= resources_uart2,
 };
 
 struct platform_device msm_device_uart3 = {
 	.name	= "msm_serial",
+#ifdef CONFIG_MACH_HTC
+	.id	= 0,
+#else
 	.id	= 2,
+#endif
 	.num_resources	= ARRAY_SIZE(resources_uart3),
 	.resource	= resources_uart3,
 };
@@ -301,6 +395,20 @@ static struct resource resources_qup[] = {
 		.end	= INT_PWB_QUP_ERR,
 		.flags	= IORESOURCE_IRQ,
 	},
+#ifdef CONFIG_MACH_HTC
+	{
+		.name	= "i2c_clk",
+		.start	= 16,
+		.end	= 16,
+		.flags	= IORESOURCE_IO,
+	},
+	{
+		.name	= "i2c_sda",
+		.start	= 17,
+		.end	= 17,
+		.flags	= IORESOURCE_IO,
+	},
+#endif
 };
 
 struct platform_device qup_device_i2c = {
@@ -1192,6 +1300,7 @@ struct platform_device *msm_footswitch_devices[] = {
 };
 unsigned msm_num_footswitch_devices = ARRAY_SIZE(msm_footswitch_devices);
 
+//CONFIG_MACH_HTC Below was not in Flyer-3.0.16
 static struct resource gpio_resources[] = {
 	{
 		.start	= INT_GPIO_GROUP1,

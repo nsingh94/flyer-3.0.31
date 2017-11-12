@@ -161,6 +161,11 @@ struct mmc_platform_data {
 	bool disable_cmd23;
 	u32 swfi_latency;
 	struct msm_mmc_bus_voting_data *msm_bus_voting_data;
+#ifdef CONFIG_MACH_HTC
+	unsigned int *slot_type;
+	int emmc_dma_ch;
+	bool sdcc_v4_sup;
+#endif
 };
 
 #endif

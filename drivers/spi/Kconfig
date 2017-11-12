@@ -445,6 +445,33 @@ config SPI_QUP
 
 	  This driver can also be built as a module.  If so, the module
 	  will be called spi_qsd.
+
+config SPI_AIC3254
+	tristate "TI AIC3254 SPI support"
+        default n
+	depends on ARCH_MSM7X30 || ARCH_MSM8X60
+	help
+	  TI AIC3254 is external codec for audio RX
+
+config SPI_DISPLAY
+	tristate "htc spi workaround"
+	default n
+	depends on ARCH_MSM_SCORPION && !MSM_SMP
+
+config SPI_TOUCHSCREEN_NTRIG
+	tristate "SPI support for Touchscreen"
+	default y
+	depends on ARCH_MSM7X30 || ARCH_MSM8X60
+	help
+		SPI driver for N-trig Touchscreen
+
+config SENSORS_BMA150_SPI
+        tristate "BMA150 G-sensor Driver"
+	depends on MICROP_COMMON
+        default y
+        help
+         BMA150 G-sensor Driver implemented by HTC.
+
 #
 # Add new SPI master controllers in alphabetical order above this line
 #

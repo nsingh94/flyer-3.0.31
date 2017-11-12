@@ -39,6 +39,13 @@
 #include <../../mm/mm.h>
 #include <linux/fmem.h>
 
+#ifdef CONFIG_MACH_HTC
+#if defined(CONFIG_ARCH_MSM7X30)
+unsigned int ebi0_size = 0x20000000;
+EXPORT_SYMBOL(ebi0_size);
+#endif
+#endif
+
 void *strongly_ordered_page;
 char strongly_ordered_mem[PAGE_SIZE*2-4];
 

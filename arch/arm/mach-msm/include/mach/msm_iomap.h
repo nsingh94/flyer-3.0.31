@@ -94,7 +94,11 @@
 /* Legacy single-target iomap */
 
 #if defined(CONFIG_ARCH_MSM7X30)
+#if defined(CONFIG_MACH_HTC)
+#include "msm_iomap-7x30_htc.h"
+#else
 #include "msm_iomap-7x30.h"
+#endif
 #elif defined(CONFIG_ARCH_QSD8X50)
 #include "msm_iomap-8x50.h"
 #elif defined(CONFIG_ARCH_MSM8X60)
@@ -105,6 +109,7 @@
 #include "msm_iomap-7xxx.h"
 #endif
 
+#ifndef CONFIG_MACH_HTC
 #if defined(CONFIG_DEBUG_MSM_UART1)
 #define MSM_DEBUG_UART_BASE	0xFB000000
 #define MSM_DEBUG_UART_PHYS	MSM_UART1_PHYS
@@ -114,6 +119,7 @@
 #elif defined(CONFIG_DEBUG_MSM_UART3)
 #define MSM_DEBUG_UART_BASE	0xFB000000
 #define MSM_DEBUG_UART_PHYS	MSM_UART3_PHYS
+#endif
 #endif
 
 #endif

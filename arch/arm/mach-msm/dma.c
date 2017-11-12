@@ -575,6 +575,7 @@ static int msm_dmov_init_clocks(struct platform_device *pdev)
 		return -ENOENT;
 	}
 
+#if defined(CONFIG_MACH_HTC) && !defined(CONFIG_ARCH_MSM7X30)
 	dmov_conf[adm].pclk = clk_get(&pdev->dev, "iface_clk");
 	if (IS_ERR(dmov_conf[adm].pclk)) {
 		dmov_conf[adm].pclk = NULL;
@@ -590,6 +591,7 @@ static int msm_dmov_init_clocks(struct platform_device *pdev)
 		if (ret)
 			return -ENOENT;
 	}
+#endif
 
 	return 0;
 }

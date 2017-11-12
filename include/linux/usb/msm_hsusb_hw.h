@@ -30,6 +30,9 @@
 #define USBCMD_RESET   2
 #define USB_USBINTR          (MSM_USB_BASE + 0x0148)
 
+#ifdef CONFIG_MACH_HTC
+#define PORTSC_LS		(3 << 10) /* Read - Port's Line status */
+#endif
 #define PORTSC_PHCD            (1 << 23) /* phy suspend mode */
 #define PORTSC_PTS_MASK         (3 << 30)
 #define PORTSC_PTS_ULPI         (3 << 30)

@@ -89,7 +89,7 @@ static enum hrtimer_restart gpio_event_input_timer_func(struct hrtimer *timer)
 					i, key_entry->gpio);
 		}
 		npolarity = !(gpio_flags & GPIOEDF_ACTIVE_HIGH);
-		pressed = gpio_get_value(key_entry->gpio) ^ npolarity;
+		pressed = gpio_get_value_cansleep(key_entry->gpio) ^ npolarity;
 		if (debounce & DEBOUNCE_POLL) {
 			if (pressed == !(debounce & DEBOUNCE_PRESSED)) {
 				ds->debounce_count++;
@@ -331,6 +331,10 @@ int gpio_event_input_func(struct gpio_event_input_devs *input_devs,
 				goto err_gpio_configure_failed;
 			}
 		}
+#ifdef CONFIG_MACH_HTC
+		if (di->setup_input_gpio)
+			di->setup_input_gpio();
+#endif
 
 		ret = gpio_event_input_request_irqs(ds);
 

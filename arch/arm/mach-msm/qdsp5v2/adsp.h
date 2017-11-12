@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 Google, Inc.
- * Copyright (c) 2008-2009, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2008-2009, Code Aurora Forum. All rights reserved.
  * Author: Iliyan Malchev <ibm@android.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -84,7 +84,7 @@ struct adsp_event {
 
 #define DALRPC_ADSPSVC_DEVICEID 0x0200009A
 #define DALRPC_ADSPSVC_DEST SMD_APPS_MODEM
-#define DALRPC_ADSPSVC_PORT "DAL00"
+#define DALRPC_ADSPSVC_PORT "SMD_DAL00"
 
 enum {
 	DALDEVICE_ADSP_CMD_IDX = DALDEVICE_FIRST_DEVICE_API_IDX,

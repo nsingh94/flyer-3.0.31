@@ -1,0 +1,4 @@
+config PHYS_OFFSET
+	hex
+    default "0x14400000" if ARCH_MSM7X30 && MACH_FLYER
+	default "0x10000000"

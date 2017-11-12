@@ -1,0 +1,11 @@
+config BOARD_HEADER_FILE
+	string "HTC board specific header file name"
+	default ""
+
+config MACH_FLYER
+       depends on ARCH_MSM7X30
+       default n
+       bool "MSM7x30 FLYER"
+	   select MACH_HTC
+       help
+         Support for the Qualcomm MSM7x30 Flyer board.

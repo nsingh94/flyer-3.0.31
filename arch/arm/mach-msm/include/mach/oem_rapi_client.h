@@ -23,7 +23,10 @@
 
 enum {
 	OEM_RAPI_CLIENT_EVENT_NONE = 0,
-
+#ifdef CONFIG_MACH_HTC
+	OEM_RAPI_CLIENT_EVENT_SDSERVICE_ENC,
+	OEM_RAPI_CLIENT_EVENT_SDSERVICE_DEC,
+#endif
 	/*
 	 * list of oem rapi client events
 	 */

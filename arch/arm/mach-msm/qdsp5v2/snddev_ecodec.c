@@ -1,4 +1,4 @@
-/* Copyright (c) 2009,2011 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2009, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -9,11 +9,17 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+ * 02110-1301, USA.
+ *
  */
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/clk.h>
 #include <linux/err.h>
+#include <linux/slab.h>
 #include <asm/uaccess.h>
 #include <mach/qdsp5v2/snddev_ecodec.h>
 #include <mach/qdsp5v2/audio_dev_ctl.h>
@@ -21,7 +27,9 @@
 #include <mach/qdsp5v2/aux_pcm.h>
 #include <mach/qdsp5v2/afe.h>
 #include <mach/debug_mm.h>
-#include <linux/slab.h>
+
+static struct q5v2audio_ecodec_ops default_audio_ops;
+static struct q5v2audio_ecodec_ops *audio_ops = &default_audio_ops;
 
 /* Context for each external codec device */
 struct snddev_ecodec_state {
@@ -48,7 +56,6 @@ static int snddev_ecodec_open_rx(struct snddev_ecodec_state *ecodec)
 	int rc = 0;
 	struct snddev_ecodec_drv_state *drv = &snddev_ecodec_drv;
 	struct msm_afe_config afe_config;
-	int ret = 0;
 
 	MM_DBG("snddev_ecodec_open_rx\n");
 
@@ -61,39 +68,6 @@ static int snddev_ecodec_open_rx(struct snddev_ecodec_state *ecodec)
 		}
 		/* config clocks */
 		clk_enable(drv->lpa_core_clk);
-
-		/*if long sync is selected in aux PCM interface
-		ecodec clock is updated to work with 128KHz,
-		if short sync is selected ecodec clock is updated to
-		work with 2.048MHz frequency, actual clock output is
-		different than the SW configuration by factor of two*/
-		if (!(ecodec->data->conf_aux_codec_intf &
-			AUX_CODEC_CTL__AUX_CODEC_MODE__I2S_V)) {
-			if (ecodec->data->conf_aux_codec_intf &
-				AUX_CODEC_CTL__AUX_PCM_MODE__AUX_MASTER_V) {
-				MM_DBG("Update ecodec clock to 128 KHz, long "
-					"sync in master mode is selected\n");
-				ret = clk_set_rate(drv->ecodec_clk, 256000);
-				if (ret < 0)
-					MM_ERR("Error updating ecodec clock"
-							" to 128KHz\n");
-			} else if (ecodec->data->conf_aux_codec_intf &
-				AUX_CODEC_CTL__AUX_PCM_MODE__PRIM_SLAVE_V) {
-				MM_DBG("Update ecodec clock to 2 MHz, short"
-					" sync in slave mode is selected\n");
-				ret = clk_set_rate(drv->ecodec_clk, 4096000);
-				if (ret < 0)
-					MM_ERR("Error updating ecodec clock"
-							" to 2.048MHz\n");
-			} else {
-				MM_DBG("Update ecodec clock to 2 MHz, short"
-					" sync in master mode is selected\n");
-				ret = clk_set_rate(drv->ecodec_clk, 4096000);
-				if (ret < 0)
-					MM_ERR("Error updating ecodec clock"
-							" to 2.048MHz\n");
-			}
-		}
 
 		/* enable ecodec clk */
 		clk_enable(drv->ecodec_clk);
@@ -164,7 +138,6 @@ static int snddev_ecodec_open_tx(struct snddev_ecodec_state *ecodec)
 	int rc = 0;
 	struct snddev_ecodec_drv_state *drv = &snddev_ecodec_drv;
 	struct msm_afe_config afe_config;
-	int ret = 0;
 
 	MM_DBG("snddev_ecodec_open_tx\n");
 
@@ -177,39 +150,6 @@ static int snddev_ecodec_open_tx(struct snddev_ecodec_state *ecodec)
 		}
 		/* config clocks */
 		clk_enable(drv->lpa_core_clk);
-
-		/*if long sync is selected in aux PCM interface
-		ecodec clock is updated to work with 128KHz,
-		if short sync is selected ecodec clock is updated to
-		work with 2.048MHz frequency, actual clock output is
-		different than the SW configuration by factor of two*/
-		if (!(ecodec->data->conf_aux_codec_intf &
-			AUX_CODEC_CTL__AUX_CODEC_MODE__I2S_V)) {
-			if (ecodec->data->conf_aux_codec_intf &
-				AUX_CODEC_CTL__AUX_PCM_MODE__AUX_MASTER_V) {
-				MM_DBG("Update ecodec clock to 128 KHz, long "
-					"sync in master mode is selected\n");
-				ret = clk_set_rate(drv->ecodec_clk, 256000);
-				if (ret < 0)
-					MM_ERR("Error updating ecodec clock"
-							" to 128KHz\n");
-			} else if (ecodec->data->conf_aux_codec_intf &
-				AUX_CODEC_CTL__AUX_PCM_MODE__PRIM_SLAVE_V) {
-				MM_DBG("Update ecodec clock to 2 MHz, short"
-					" sync in slave mode is selected\n");
-				ret = clk_set_rate(drv->ecodec_clk, 4096000);
-				if (ret < 0)
-					MM_ERR("Error updating ecodec clock"
-							" to 2.048MHz\n");
-			} else {
-				MM_DBG("Update ecodec clock to 2 MHz, short"
-					" sync in master mode is selected\n");
-				ret = clk_set_rate(drv->ecodec_clk, 4096000);
-				if (ret < 0)
-					MM_ERR("Error updating ecodec clock"
-							" to 2.048MHz\n");
-			}
-		}
 
 		/* enable ecodec clk */
 		clk_enable(drv->ecodec_clk);
@@ -288,6 +228,10 @@ static int snddev_ecodec_open(struct msm_snddev_info *dev_info)
 	}
 
 	ecodec = dev_info->private_data;
+	MM_INFO("snddev_ecodec_open: device %s\n", dev_info->name);
+
+	if (audio_ops->bt_sco_enable)
+		audio_ops->bt_sco_enable(1);
 
 	if (ecodec->data->capability & SNDDEV_CAP_RX) {
 		mutex_lock(&drv->dev_lock);
@@ -327,6 +271,10 @@ static int snddev_ecodec_close(struct msm_snddev_info *dev_info)
 	}
 
 	ecodec = dev_info->private_data;
+	MM_INFO("snddev_icodec_open: device %s\n", dev_info->name);
+
+	if (audio_ops->bt_sco_enable)
+		audio_ops->bt_sco_enable(0);
 
 	if (ecodec->data->capability & SNDDEV_CAP_RX) {
 		mutex_lock(&drv->dev_lock);
@@ -370,9 +318,14 @@ error:
 	return rc;
 }
 
+void htc_7x30_register_ecodec_ops(struct q5v2audio_ecodec_ops *ops)
+{
+	audio_ops = ops;
+}
+
 static int snddev_ecodec_probe(struct platform_device *pdev)
 {
-	int rc = 0, i;
+	int rc = 0;
 	struct snddev_ecodec_data *pdata;
 	struct msm_snddev_info *dev_info;
 	struct snddev_ecodec_state *ecodec;
@@ -411,14 +364,9 @@ static int snddev_ecodec_probe(struct platform_device *pdev)
 	msm_snddev_register(dev_info);
 	ecodec->data = pdata;
 	ecodec->sample_rate = 8000; /* Default to 8KHz */
-	 if (pdata->capability & SNDDEV_CAP_RX) {
-		for (i = 0; i < VOC_RX_VOL_ARRAY_NUM; i++) {
-			dev_info->max_voc_rx_vol[i] =
-				pdata->max_voice_rx_vol[i];
-			dev_info->min_voc_rx_vol[i] =
-				pdata->min_voice_rx_vol[i];
-		}
-	}
+	 if (pdata->capability & SNDDEV_CAP_RX)
+		dev_info->vol_idx = pdata->vol_idx;
+
 error:
 	return rc;
 }

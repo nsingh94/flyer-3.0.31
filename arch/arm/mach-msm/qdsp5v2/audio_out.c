@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2008 Google, Inc.
  * Copyright (C) 2008 HTC Corporation
- * Copyright (c) 2009-2012, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2009-2010, Code Aurora Forum. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -15,9 +15,7 @@
  * GNU General Public License for more details.
  *
  */
-#include <asm/atomic.h>
-#include <asm/ioctls.h>
-
+#include <linux/version.h>
 #include <linux/module.h>
 #include <linux/fs.h>
 #include <linux/miscdevice.h>
@@ -28,25 +26,21 @@
 #include <linux/debugfs.h>
 #include <linux/delay.h>
 #include <linux/wakelock.h>
-#include <linux/memory_alloc.h>
 
 #include <linux/msm_audio.h>
-#include <linux/android_pmem.h>
 
+#include <asm/atomic.h>
+#include <asm/ioctls.h>
 #include <mach/msm_adsp.h>
-#include <mach/iommu.h>
-#include <mach/iommu_domains.h>
-#include <mach/msm_subsystem_map.h>
 #include <mach/qdsp5v2/qdsp5audppcmdi.h>
 #include <mach/qdsp5v2/qdsp5audppmsg.h>
 #include <mach/qdsp5v2/audio_dev_ctl.h>
 #include <mach/qdsp5v2/audpp.h>
 #include <mach/qdsp5v2/audio_dev_ctl.h>
-#include <mach/msm_memtypes.h>
-#include <linux/ion.h>
 
 #include <mach/htc_pwrsink.h>
 #include <mach/debug_mm.h>
+#include <linux/rtc.h>
 
 #define BUFSZ (960 * 5)
 #define DMASZ (BUFSZ * 2)
@@ -86,22 +80,20 @@ struct audio {
 	/* data allocated for various buffers */
 	char *data;
 	dma_addr_t phys;
-	struct msm_mapped_buffer *map_v_write;
+
 	int teos; /* valid only if tunnel mode & no data left for decoder */
 	int opened;
 	int enabled;
 	int running;
 	int stopped; /* set when stopped, cleared on flush */
 	uint16_t dec_id;
-	int voice_state;
 
 	struct wake_lock wakelock;
 	struct wake_lock idlelock;
 
 	struct audpp_cmd_cfg_object_params_volume vol_pan;
-	struct ion_client *client;
-	struct ion_handle *buff_handle;
 };
+
 
 static void audio_out_listener(u32 evt_id, union auddev_evt_data *evt_payload,
 				void *private_data)
@@ -128,19 +120,6 @@ static void audio_out_listener(u32 evt_id, union auddev_evt_data *evt_payload,
 			audpp_dsp_set_vol_pan(audio->dec_id, &audio->vol_pan,
 					POPP);
 		break;
-	case AUDDEV_EVT_VOICE_STATE_CHG:
-		MM_DBG("AUDDEV_EVT_VOICE_STATE_CHG, state = %d\n",
-						evt_payload->voice_state);
-		audio->voice_state = evt_payload->voice_state;
-		/* Voice uplink Rx case */
-		if (audio->running &&
-			(audio->source & AUDPP_MIXER_UPLINK_RX) &&
-			(audio->voice_state == VOICE_STATE_OFFCALL)) {
-			MM_DBG("Voice is terminated, Wake up write: %x %x\n",
-					audio->voice_state, audio->source);
-			wake_up(&audio->wait);
-		}
-		break;
 	default:
 		MM_ERR("ERROR:wrong event\n");
 		break;
@@ -149,6 +128,16 @@ static void audio_out_listener(u32 evt_id, union auddev_evt_data *evt_payload,
 
 static void audio_prevent_sleep(struct audio *audio)
 {
+	struct timespec ts;
+	struct rtc_time tm;
+	getnstimeofday(&ts);
+	rtc_time_to_tm(ts.tv_sec, &tm);
+	MM_INFO("++++++++++++++++++++++++++++++\n");
+	MM_INFO("[ATS][play_music][successful] at %lld \
+		(%d-%02d-%02d %02d:%02d:%02d.%09lu UTC)\n",
+		ktime_to_ns(ktime_get()),
+		tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+		tm.tm_hour, tm.tm_min, tm.tm_sec, ts.tv_nsec);
 	MM_DBG("\n"); /* Macro prints the file name and function */
 	wake_lock(&audio->wakelock);
 	wake_lock(&audio->idlelock);
@@ -156,9 +145,19 @@ static void audio_prevent_sleep(struct audio *audio)
 
 static void audio_allow_sleep(struct audio *audio)
 {
+	struct timespec ts;
+	struct rtc_time tm;
 	wake_unlock(&audio->wakelock);
 	wake_unlock(&audio->idlelock);
 	MM_DBG("\n"); /* Macro prints the file name and function */
+	getnstimeofday(&ts);
+	rtc_time_to_tm(ts.tv_sec, &tm);
+	MM_INFO("[ATS][stop_music][successful] at %lld \
+		(%d-%02d-%02d %02d:%02d:%02d.%09lu UTC)\n",
+		ktime_to_ns(ktime_get()),
+		tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+		tm.tm_hour, tm.tm_min, tm.tm_sec, ts.tv_nsec);
+	MM_INFO("------------------------------\n");
 }
 
 static int audio_dsp_out_enable(struct audio *audio, int yes);
@@ -170,7 +169,7 @@ static void audio_dsp_event(void *private, unsigned id, uint16_t *msg);
 /* must be called with audio->lock held */
 static int audio_enable(struct audio *audio)
 {
-	MM_DBG("\n"); /* Macro prints the file name and function */
+	MM_INFO("audio_enable\n");
 
 	if (audio->enabled)
 		return 0;
@@ -201,7 +200,7 @@ static int audio_enable(struct audio *audio)
 /* must be called with audio->lock held */
 static int audio_disable(struct audio *audio)
 {
-	MM_DBG("\n"); /* Macro prints the file name and function */
+	MM_INFO("audio_disable\n");
 	if (audio->enabled) {
 		audio->enabled = 0;
 		audio_dsp_out_enable(audio, 0);
@@ -262,8 +261,7 @@ static void audio_dsp_event(void *private, unsigned id, uint16_t *msg)
 		/* prints only if 1 second is elapsed since the last time
 		 * this message has been printed */
 		if (printk_timed_ratelimit(&pcmdmamsd_time, 1000))
-			printk(KERN_INFO "[%s:%s] PCMDMAMISSED %d\n",
-					__MM_FILE__, __func__, msg[0]);
+			MM_INFO("PCMDMAMISSED %d\n", msg[0]);
 		audio->teos++;
 		MM_DBG("PCMDMAMISSED Count per Buffer %d\n", audio->teos);
 		wake_up(&audio->wait);
@@ -388,13 +386,7 @@ static long audio_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	mutex_lock(&audio->lock);
 	switch (cmd) {
 	case AUDIO_START:
-		if ((audio->voice_state != VOICE_STATE_INCALL)
-			&& (audio->source & AUDPP_MIXER_UPLINK_RX)) {
-			MM_ERR("Unable to Start : state %d source %d\n",
-					audio->voice_state, audio->source);
-			rc = -EPERM;
-			break;
-		}
+		MM_INFO("AUDIO_START\n");
 		rc = audio_enable(audio);
 		break;
 	case AUDIO_STOP:
@@ -466,7 +458,7 @@ static long audio_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 }
 
 /* Only useful in tunnel-mode */
-static int audio_fsync(struct file *file,	int datasync)
+static int audio_fsync(struct file *file, int datasync)
 {
 	struct audio *audio = file->private_data;
 	int rc = 0;
@@ -527,21 +519,15 @@ static ssize_t audio_write(struct file *file, const char __user *buf,
 	int rc = 0;
 
 
-	if ((audio->voice_state == VOICE_STATE_OFFCALL)
-		&& (audio->source & AUDPP_MIXER_UPLINK_RX) &&
-							audio->running) {
-		MM_ERR("Not Permitted Voice Terminated: state %d source %x \
-			running %d\n",
-			audio->voice_state, audio->source, audio->running);
-		return -EPERM;
-	}
 	/* just for this write, set us real-time */
 	if (!task_has_rt_policy(current)) {
 		struct cred *new = prepare_creds();
-		cap_raise(new->cap_effective, CAP_SYS_NICE);
-		commit_creds(new);
-		if ((sched_setscheduler(current, SCHED_RR, &s)) < 0)
-			MM_ERR("sched_setscheduler failed\n");
+		if (new != NULL) {
+			cap_raise(new->cap_effective, CAP_SYS_NICE);
+			commit_creds(new);
+			if ((sched_setscheduler(current, SCHED_RR, &s)) < 0)
+				MM_ERR("sched_setscheduler failed\n");
+		}
 	}
 
 	mutex_lock(&audio->write_lock);
@@ -549,23 +535,15 @@ static ssize_t audio_write(struct file *file, const char __user *buf,
 		frame = audio->out + audio->out_head;
 
 		rc = wait_event_interruptible(audio->wait,
-		      (frame->used == 0) || (audio->stopped) ||
-			((audio->voice_state == VOICE_STATE_OFFCALL) &&
-			(audio->source & AUDPP_MIXER_UPLINK_RX)));
+					      (frame->used == 0) ||
+						(audio->stopped));
 
 		if (rc < 0)
 			break;
 		if (audio->stopped) {
 			rc = -EBUSY;
 			break;
-		} else if ((audio->voice_state == VOICE_STATE_OFFCALL) &&
-			(audio->source & AUDPP_MIXER_UPLINK_RX)) {
-			MM_ERR("Not Permitted Voice Terminated: %d\n",
-							audio->voice_state);
-			rc = -EPERM;
-			break;
 		}
-
 		xfer = count > frame->size ? frame->size : count;
 		if (copy_from_user(frame->data, buf, xfer)) {
 			rc = -EFAULT;
@@ -600,8 +578,10 @@ static ssize_t audio_write(struct file *file, const char __user *buf,
 			MM_ERR("sched_setscheduler failed\n");
 		if (likely(!cap_nice)) {
 			struct cred *new = prepare_creds();
-			cap_lower(new->cap_effective, CAP_SYS_NICE);
-			commit_creds(new);
+			if (new != NULL) {
+				cap_lower(new->cap_effective, CAP_SYS_NICE);
+				commit_creds(new);
+			}
 		}
 	}
 
@@ -632,13 +612,22 @@ static int audio_open(struct inode *inode, struct file *file)
 	int rc;
 
 	mutex_lock(&audio->lock);
-
+	MM_INFO("host pcm open\n");
 	if (audio->opened) {
 		MM_ERR("busy\n");
 		rc = -EBUSY;
 		goto done;
 	}
 
+	if (!audio->data) {
+		audio->data = dma_alloc_coherent(NULL, DMASZ,
+						 &audio->phys, GFP_KERNEL);
+		if (!audio->data) {
+			MM_ERR("could not allocate DMA buffers\n");
+			rc = -ENOMEM;
+			goto done;
+		}
+	}
 
 	audio->dec_id = HOSTPCM_STREAM_ID;
 
@@ -660,12 +649,9 @@ static int audio_open(struct inode *inode, struct file *file)
 	audio->source = 0x0;
 
 	audio_flush(audio);
-	audio->voice_state = msm_get_voice_state();
-	MM_DBG("voice_state = %x\n", audio->voice_state);
 	audio->device_events = AUDDEV_EVT_DEV_RDY
 				|AUDDEV_EVT_DEV_RLS|
-				AUDDEV_EVT_STREAM_VOL_CHG|
-				AUDDEV_EVT_VOICE_STATE_CHG;
+				AUDDEV_EVT_STREAM_VOL_CHG;
 
 	MM_DBG("register for event callback pdata %p\n", audio);
 	rc = auddev_register_evt_listner(audio->device_events,
@@ -675,12 +661,14 @@ static int audio_open(struct inode *inode, struct file *file)
 					(void *)audio);
 	if (rc) {
 		MM_ERR("%s: failed to register listener\n", __func__);
+		dma_free_coherent(NULL, DMASZ, audio->data, audio->phys);
 		goto done;
 	}
 
 	file->private_data = audio;
 	audio->opened = 1;
 	rc = 0;
+
 done:
 	mutex_unlock(&audio->lock);
 	return rc;
@@ -702,73 +690,17 @@ struct miscdevice audio_misc = {
 	.fops	= &audio_fops,
 };
 
+
 static int __init audio_init(void)
 {
-	unsigned long ionflag = 0;
-	ion_phys_addr_t addr = 0;
-	int rc;
-	int len = 0;
-	struct ion_handle *handle = NULL;
-	struct ion_client *client = NULL;
-
-	client = msm_ion_client_create(UINT_MAX, "HostPCM");
-	if (IS_ERR_OR_NULL(client)) {
-		MM_ERR("Unable to create ION client\n");
-		rc = -ENOMEM;
-		goto client_create_error;
-	}
-	the_audio.client = client;
-
-	handle = ion_alloc(client, DMASZ, SZ_4K,
-		ION_HEAP(ION_AUDIO_HEAP_ID));
-	if (IS_ERR_OR_NULL(handle)) {
-		MM_ERR("Unable to create allocate O/P buffers\n");
-		rc = -ENOMEM;
-		goto buff_alloc_error;
-	}
-	the_audio.buff_handle = handle;
-
-	rc = ion_phys(client, handle, &addr, &len);
-	if (rc) {
-		MM_ERR("O/P buffers:Invalid phy: %x sz: %x\n",
-			(unsigned int) addr, (unsigned int) len);
-		goto buff_get_phys_error;
-	} else
-		MM_INFO("O/P buffers:valid phy: %x sz: %x\n",
-			(unsigned int) addr, (unsigned int) len);
-	the_audio.phys = (int32_t)addr;
-
-	rc = ion_handle_get_flags(client, handle, &ionflag);
-	if (rc) {
-		MM_ERR("could not get flags for the handle\n");
-		goto buff_get_flags_error;
-	}
-
-	the_audio.map_v_write = ion_map_kernel(client, handle, ionflag);
-	if (IS_ERR(the_audio.map_v_write)) {
-		MM_ERR("could not map write buffers\n");
-		rc = -ENOMEM;
-		goto buff_map_error;
-	}
-	the_audio.data = (char *)the_audio.map_v_write;
-	MM_DBG("Memory addr = 0x%8x  phy addr = 0x%8x\n",\
-		(int) the_audio.data, (int) the_audio.phys);
 	mutex_init(&the_audio.lock);
 	mutex_init(&the_audio.write_lock);
 	spin_lock_init(&the_audio.dsp_lock);
 	init_waitqueue_head(&the_audio.wait);
 	wake_lock_init(&the_audio.wakelock, WAKE_LOCK_SUSPEND, "audio_pcm");
 	wake_lock_init(&the_audio.idlelock, WAKE_LOCK_IDLE, "audio_pcm_idle");
-	return misc_register(&audio_misc);
-buff_map_error:
-buff_get_phys_error:
-buff_get_flags_error:
-	ion_free(client, the_audio.buff_handle);
-buff_alloc_error:
-	ion_client_destroy(client);
-client_create_error:
-	return rc;
 
+	return misc_register(&audio_misc);
 }
 
-late_initcall(audio_init);
+device_initcall(audio_init);

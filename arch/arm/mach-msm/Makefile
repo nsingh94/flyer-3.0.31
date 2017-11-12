@@ -5,7 +5,7 @@ ifndef CONFIG_ARM_ARCH_TIMER
 obj-y += timer.o
 endif
 obj-y += clock.o clock-voter.o clock-dummy.o
-obj-y += modem_notifier.o subsystem_map.o
+obj-y += subsystem_map.o
 obj-$(CONFIG_CPU_FREQ_MSM) += cpufreq.o
 obj-$(CONFIG_DEBUG_FS) += nohlt.o clock-debug.o
 obj-$(CONFIG_KEXEC) += msm_kexec.o
@@ -78,52 +78,56 @@ obj-$(CONFIG_ARCH_QSD8X50) += sirc.o
 obj-$(CONFIG_ARCH_FSM9XXX) += sirc-fsm9xxx.o
 obj-$(CONFIG_MSM_FIQ_SUPPORT) += fiq_glue.o
 obj-$(CONFIG_MACH_TROUT) += board-trout-rfkill.o
-obj-$(CONFIG_MSM_SDIO_AL) += sdio_al.o
-obj-$(CONFIG_MSM_SDIO_AL) += sdio_al_test.o
-obj-$(CONFIG_MSM_SDIO_AL) += sdio_al_dloader.o
 obj-$(CONFIG_MSM_SDIO_DMUX) += sdio_dmux.o
 obj-$(CONFIG_MSM_BAM_DMUX) += bam_dmux.o
-obj-$(CONFIG_MSM_SMD_LOGGING) += smem_log.o
-obj-$(CONFIG_MSM_SMD) += smd.o smd_debug.o remote_spinlock.o
+obj-$(CONFIG_MSM_SMD) += remote_spinlock.o
 obj-y += socinfo.o
 ifndef CONFIG_ARCH_MSM9615
 ifndef CONFIG_ARCH_APQ8064
 ifndef CONFIG_ARCH_MSM8960
 ifndef CONFIG_ARCH_MSM8X60
 	obj-$(CONFIG_MSM_SMD) += pmic.o
-	obj-$(CONFIG_MSM_ONCRPCROUTER) += rpc_hsusb.o rpc_pmapp.o rpc_fsusb.o
+	obj-$(CONFIG_MSM_ONCRPCROUTER) += rpc_hsusb.o rpc_fsusb.o
 endif
 endif
 endif
 endif
 ifndef CONFIG_ARCH_MSM8960
 ifndef CONFIG_ARCH_MSM8X60
+ifndef CONFIG_ARCH_MSM7X30
 ifndef CONFIG_ARCH_APQ8064
 ifndef CONFIG_ARCH_MSMCOPPER
+ifndef CONFIG_ARCH_MSM7X27A
 	obj-y += nand_partitions.o
 endif
 endif
 endif
 endif
-obj-$(CONFIG_MSM_SDIO_TTY) += sdio_tty.o
+endif
+endif
+
+ifeq ($(CONFIG_ARCH_MSM7X30_SMD),y)
+obj-$(CONFIG_ARCH_MSM7X30_SMD) += 7x30-smd/
+else # Else CONFIG_ARCH_MSM7X30_SMD
+obj-y += modem_notifier.o
+obj-$(CONFIG_MSM_SMD_LOGGING) += smem_log.o
+ifeq ($(CONFIG_ARCH_MSM7X27A),y)
+obj-$(CONFIG_MSM_SMD) += smd.o smd_7x2x_debug.o
+else # Else CONFIG_ARCH_MSM7X27A
+obj-$(CONFIG_MSM_SMD) += smd.o smd_debug.o
+endif # End CONFIG_ARCH_MSM7X27A
 obj-$(CONFIG_MSM_SMD_TTY) += smd_tty.o
 obj-$(CONFIG_MSM_SMD_QMI) += smd_qmi.o
 obj-$(CONFIG_MSM_SMD_PKT) += smd_pkt.o
-obj-$(CONFIG_MSM_SDIO_CMUX) += sdio_cmux.o
-obj-$(CONFIG_MSM_DSPS) += msm_dsps.o
-obj-$(CONFIG_MSM_SDIO_CTL) += sdio_ctl.o
 obj-$(CONFIG_MSM_SMD_NMEA) += smd_nmea.o
-obj-$(CONFIG_MSM_RESET_MODEM) += reset_modem.o
-obj-$(CONFIG_MSM_IPC_ROUTER_SMD_XPRT) += ipc_router_smd_xprt.o
 obj-$(CONFIG_MSM_ONCRPCROUTER) += smd_rpcrouter.o
 obj-$(CONFIG_MSM_ONCRPCROUTER) += smd_rpcrouter_device.o
-obj-$(CONFIG_MSM_IPC_ROUTER) += ipc_router.o
-obj-$(CONFIG_MSM_IPC_ROUTER)+= ipc_socket.o
 obj-$(CONFIG_DEBUG_FS) += smd_rpc_sym.o
 obj-$(CONFIG_MSM_ONCRPCROUTER) += smd_rpcrouter_servers.o
 obj-$(CONFIG_MSM_ONCRPCROUTER) += smd_rpcrouter_clients.o
 obj-$(CONFIG_MSM_ONCRPCROUTER) += smd_rpcrouter_xdr.o
 obj-$(CONFIG_MSM_ONCRPCROUTER) += rpcrouter_smd_xprt.o
+obj-$(CONFIG_MSM_ONCRPCROUTER) += rpc_pmapp.o
 obj-$(CONFIG_MSM_RPC_SDIO_XPRT) += rpcrouter_sdio_xprt.o
 obj-$(CONFIG_MSM_RPC_PING) += ping_mdm_rpc_client.o
 obj-$(CONFIG_MSM_RPC_PROC_COMM_TEST) += proc_comm_test.o
@@ -132,13 +136,20 @@ obj-$(CONFIG_MSM_RPC_OEM_RAPI) += oem_rapi_client.o
 obj-$(CONFIG_MSM_RPC_WATCHDOG) += rpc_dog_keepalive.o
 obj-$(CONFIG_MSM_RPCSERVER_WATCHDOG) += rpc_server_dog_keepalive.o
 obj-$(CONFIG_MSM_RPCSERVER_TIME_REMOTE) += rpc_server_time_remote.o
+obj-$(CONFIG_MSM_RPCSERVER_HANDSET) += rpc_server_handset.o
+endif # End CONFIG_ARCH_MSM7X30_SMD
+
+obj-$(CONFIG_MSM_DSPS) += msm_dsps.o
+obj-$(CONFIG_MSM_RESET_MODEM) += reset_modem.o
+obj-$(CONFIG_MSM_IPC_ROUTER_SMD_XPRT) += ipc_router_smd_xprt.o
+obj-$(CONFIG_MSM_IPC_ROUTER) += ipc_router.o
+obj-$(CONFIG_MSM_IPC_ROUTER)+= ipc_socket.o
 obj-$(CONFIG_MSM_DALRPC) += dal.o
 obj-$(CONFIG_MSM_DALRPC_TEST) += dal_remotetest.o
 obj-$(CONFIG_ARCH_MSM7X30) += dal_axi.o
 obj-$(CONFIG_ARCH_MSM7X27A) += dal_axi.o
 obj-$(CONFIG_MSM_ADSP) += qdsp5/
 obj-$(CONFIG_MSM7KV2_AUDIO) += qdsp5v2/
-obj-$(CONFIG_MSM_RPCSERVER_HANDSET) += rpc_server_handset.o
 obj-$(CONFIG_MSM_QDSP6) += qdsp6/
 obj-$(CONFIG_MSM8X60_AUDIO) += qdsp6v2/
 obj-$(CONFIG_MSM_AUDIO_QDSP6) += qdsp6v2/
@@ -220,7 +231,7 @@ obj-$(CONFIG_MACH_MSM7X27A_RUMI3) += board-msm7x27a.o board-msm7627a-storage.o b
 obj-$(CONFIG_MACH_MSM7X27A_SURF) += board-msm7x27a.o board-msm7627a-storage.o board-msm7627a-bt.o board-msm7627a-camera.o
 obj-$(CONFIG_MACH_MSM7X27A_FFA) += board-msm7x27a.o board-msm7627a-storage.o board-msm7627a-bt.o board-msm7627a-camera.o
 obj-$(CONFIG_MACH_MSM7627A_QRD1) += board-qrd7627a.o board-msm7627a-storage.o board-msm7627a-bt.o board-msm7627a-camera.o
-obj-$(CONFIG_ARCH_MSM7X30) += board-msm7x30.o devices-msm7x30.o memory_topology.o
+obj-$(CONFIG_ARCH_MSM7X30) += devices-msm7x30.o memory_topology.o
 obj-$(CONFIG_ARCH_MSM7X30) += clock-local.o clock-7x30.o acpuclock-7x30.o
 obj-$(CONFIG_MACH_MSM7X25_SURF) += board-msm7x27.o devices-msm7x25.o
 obj-$(CONFIG_MACH_MSM7X25_FFA) += board-msm7x27.o devices-msm7x25.o
@@ -249,6 +260,22 @@ obj-$(CONFIG_ARCH_MSM9615) += board-9615.o devices-9615.o board-9615-regulator.o
 obj-$(CONFIG_ARCH_MSM9615) += clock-local.o clock-9615.o acpuclock-9615.o clock-rpm.o
 obj-$(CONFIG_ARCH_MSMCOPPER) += board-copper.o board-dt.o
 
+ifeq ($(CONFIG_ARCH_MSM8X60_LTE),y)
+obj-$(CONFIG_ARCH_MSM8X60_LTE) += 8x60-lte/
+else
+ifeq ($(CONFIG_ARCH_MSM7X30_SMD),y)
+obj-$(CONFIG_ARCH_MSM7X30_SMD) += 7x30-smd/
+else # Else CONFIG_ARCH_MSM7X30_SMD
+obj-$(CONFIG_MSM_SDIO_AL) += sdio_al.o
+obj-$(CONFIG_MSM_SDIO_AL) += sdio_al_test.o
+obj-$(CONFIG_MSM_SDIO_AL) += sdio_al_dloader.o
+obj-$(CONFIG_MSM_SDIO_DMUX) += sdio_dmux.o
+obj-$(CONFIG_MSM_SDIO_CMUX) += sdio_cmux.o
+obj-$(CONFIG_MSM_SDIO_CTL) += sdio_ctl.o
+obj-$(CONFIG_MSM_SDIO_TTY) += sdio_tty.o
+endif # End CONFIG_ARCH_MSM7X30_SMD
+endif
+
 obj-$(CONFIG_MACH_SAPPHIRE) += board-sapphire.o board-sapphire-gpio.o
 obj-$(CONFIG_MACH_SAPPHIRE) += board-sapphire-keypad.o board-sapphire-panel.o
 obj-$(CONFIG_MACH_SAPPHIRE) += board-sapphire-mmc.o board-sapphire-wifi.o
@@ -262,7 +289,11 @@ obj-$(CONFIG_TROUT_BATTCHG) += htc_battery.o
 
 obj-$(CONFIG_HTC_PWRSINK) += htc_pwrsink.o
 obj-$(CONFIG_HTC_HEADSET) += htc_headset.o
+ifeq ($(CONFIG_ARCH_MSM7X30),y)
+obj-$(CONFIG_MSM_RMT_STORAGE_CLIENT) += rmt_storage_client-7x30.o
+else
 obj-$(CONFIG_MSM_RMT_STORAGE_CLIENT) += rmt_storage_client.o
+endif
 obj-$(CONFIG_MSM_SDIO_SMEM) += sdio_smem.o
 obj-$(CONFIG_MSM_RPM) += rpm.o rpm_resources.o
 obj-$(CONFIG_MSM_MPM) += mpm.o
@@ -322,3 +353,5 @@ obj-$(CONFIG_MSM_CACHE_DUMP) += msm_cache_dump.o
 obj-$(CONFIG_MSM_CPU_PWRCTL) +=  msm_cpu_pwrctl.o
 
 obj-$(CONFIG_ARCH_RANDOM) += early_random.o
+
+obj-$(CONFIG_MACH_HTC) += htc/

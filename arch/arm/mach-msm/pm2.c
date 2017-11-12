@@ -16,13 +16,15 @@
  *
  */
 
+
+
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/init.h>
 #include <linux/pm.h>
-#include <linux/pm_qos_params.h>
+#include <linux/pm_qos.h>
 #include <linux/proc_fs.h>
 #include <linux/suspend.h>
 #include <linux/reboot.h>
@@ -62,6 +64,10 @@
 #include "spm.h"
 #include "sirc.h"
 #include "pm-boot.h"
+
+#ifdef CONFIG_MACH_HTC
+#include "htc/include/pm2.c"
+#else
 
 /******************************************************************************
  * Debug Definitions
@@ -1859,3 +1865,4 @@ static int __init msm_pm_init(void)
 }
 
 late_initcall_sync(msm_pm_init);
+#endif //CONFIG_MACH_HTC

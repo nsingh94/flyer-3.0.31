@@ -19,6 +19,9 @@
 
 struct msm_ssbi_slave_info {
 	const char	*name;
+#ifdef CONFIG_ARCH_MSM7X30
+	int		irq;
+#endif
 	void		*platform_data;
 };
 
@@ -32,6 +35,9 @@ enum msm_ssbi_controller_type {
 struct msm_ssbi_platform_data {
 	const char *rsl_id;
 	struct msm_ssbi_slave_info	slave;
+#ifdef CONFIG_ARCH_MSM7X30
+	const char			*rspinlock_name;
+#endif
 	enum msm_ssbi_controller_type controller_type;
 };
 

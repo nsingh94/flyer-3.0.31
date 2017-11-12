@@ -89,6 +89,9 @@ static struct pll pll2_tbl[] = {
 	{  53, 1, 3, 0 }, /* 1024 MHz */
 	{ 125, 0, 1, 1 }, /* 1200 MHz */
 	{  73, 0, 1, 0 }, /* 1401 MHz */
+#ifdef CONFIG_MACH_HTC
+	{  78, 0, 1, 0 }, /* 1500 MHz */
+#endif
 };
 
 /* Use negative numbers for sources that can't be enabled/disabled */
@@ -112,6 +115,17 @@ static struct clk *acpuclk_sources[MAX_SOURCE];
  * know all the h/w requirements.
  */
 static struct clkctl_acpu_speed acpu_freq_tbl[] = {
+#ifdef CONFIG_MACH_HTC
+	{ 0, 24576,  LPXO, 0, 0,  30720000,  1000, VDD_RAW(1000) },
+	{ 0, 61440,  PLL_3,    5, 11, 61440000,  1000, VDD_RAW(1000) },
+	{ 0, 122880, PLL_3,    5, 5,  61440000,  1000, VDD_RAW(1000) },
+	{ 0, 184320, PLL_3,    5, 4,  61440000,  1000, VDD_RAW(1000) },
+	{ 0, MAX_AXI_KHZ, AXI, 1, 0, 61440000, 1000, VDD_RAW(1000) },
+	{ 1, 245760, PLL_3,    5, 2,  61440000,  1000, VDD_RAW(1000) },
+	{ 1, 368640, PLL_3,    5, 1,  122800000, 1050, VDD_RAW(1050) },
+	/* AXI has MSMC1 implications. See above. */
+	{ 1, 768000, PLL_1,    2, 0,  153600000, 1100, VDD_RAW(1100) },
+#else
 	{ 0, 24576,  LPXO, 0, 0,  30720000,  900, VDD_RAW(900) },
 	{ 0, 61440,  PLL_3,    5, 11, 61440000,  900, VDD_RAW(900) },
 	{ 1, 122880, PLL_3,    5, 5,  61440000,  900, VDD_RAW(900) },
@@ -121,6 +135,7 @@ static struct clkctl_acpu_speed acpu_freq_tbl[] = {
 	{ 1, 368640, PLL_3,    5, 1,  122800000, 900, VDD_RAW(900) },
 	/* AXI has MSMC1 implications. See above. */
 	{ 1, 768000, PLL_1,    2, 0,  153600000, 1050, VDD_RAW(1050) },
+#endif
 	/*
 	 * AXI has MSMC1 implications. See above.
 	 */
@@ -128,6 +143,9 @@ static struct clkctl_acpu_speed acpu_freq_tbl[] = {
 	{ 1, 1024000, PLL_2, 3, 0, UINT_MAX, 1200, VDD_RAW(1200), &pll2_tbl[1]},
 	{ 1, 1200000, PLL_2, 3, 0, UINT_MAX, 1200, VDD_RAW(1200), &pll2_tbl[2]},
 	{ 1, 1401600, PLL_2, 3, 0, UINT_MAX, 1250, VDD_RAW(1250), &pll2_tbl[3]},
+#ifdef CONFIG_MACH_HTC
+	{ 1, 1497600, PLL_2, 3, 0, UINT_MAX, 1250, VDD_RAW(1250), &pll2_tbl[4]},
+#endif
 	{ 0 }
 };
 
@@ -323,7 +341,7 @@ static void __init acpuclk_hw_init(void)
 	int res;
 	u8 pll2_l = readl_relaxed(PLL2_L_VAL_ADDR) & 0xFF;
 
-	drv_state.ebi1_clk = clk_get(NULL, "ebi1_clk");
+	drv_state.ebi1_clk = clk_get(NULL, "ebi1_clk"); //Flyer was ebi1_dcvs_clk
 	BUG_ON(IS_ERR(drv_state.ebi1_clk));
 
 	reg_clksel = readl_relaxed(SCSS_CLK_SEL_ADDR);
@@ -439,6 +457,13 @@ void __init pll2_fixup(void)
 	for ( ; speed->acpu_clk_khz; speed++) {
 		if (speed->src != PLL_2)
 			backup_s = speed;
+#ifdef CONFIG_MACH_HTC
+		/* Base on PLL2_L_VAL_ADDR to switch acpu speed */
+		else {
+			if (speed->pll_rate && speed->pll_rate->l != pll2_l)
+				speed->use_for_scaling = 0;
+		}
+#endif
 		if (speed->pll_rate && speed->pll_rate->l == pll2_l) {
 			speed++;
 			speed->acpu_clk_khz = 0;
@@ -448,6 +473,9 @@ void __init pll2_fixup(void)
 
 	pr_err("Unknown PLL2 lval %d\n", pll2_l);
 	BUG();
+#ifdef CONFIG_MACH_FLYER
+	speed->axi_clk_hz = UINT_MAX;
+#endif
 }
 
 #define RPM_BYPASS_MASK	(1 << 3)

@@ -12,6 +12,11 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
+
+#ifndef CONFIG_FB_MSM_NEW
+#include "msm_mdp_legacy.h"
+#endif
+
 #ifndef _MSM_MDP_H_
 #define _MSM_MDP_H_
 

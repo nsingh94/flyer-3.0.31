@@ -24,7 +24,7 @@
 #include <mach/msm_bus.h>
 #include <mach/msm_bus_board.h>
 
-#include <linux/pm_qos_params.h>
+#include <linux/pm_qos.h>
 
 /* AXI rates in KHz */
 #define MSM_AXI_QOS_PREVIEW     192000

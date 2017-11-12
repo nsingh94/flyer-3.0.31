@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2010, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2008-2010, Code Aurora Forum. All rights reserved.
  *
  * All source code in this file is licensed under the following license except
  * where indicated.
@@ -74,7 +74,7 @@ static struct snd_pcm_hardware msm_pcm_capture_hardware = {
 	.channels_min =         1,
 	.channels_max =         2,
 	.buffer_bytes_max =     MAX_BUFFER_CAPTURE_SIZE,
-	.period_bytes_min =	4096,
+	.period_bytes_min =		4096,
 	.period_bytes_max =     4096,
 	.periods_min =          4,
 	.periods_max =          4,

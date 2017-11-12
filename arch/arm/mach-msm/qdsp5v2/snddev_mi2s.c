@@ -1,4 +1,4 @@
-/* Copyright (c) 2010, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -8,6 +8,11 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+ * 02110-1301, USA.
  */
 
 #include <linux/module.h>
@@ -34,6 +39,8 @@ struct snddev_mi2s_drv_state {
 };
 
 static struct snddev_mi2s_drv_state snddev_mi2s_drv;
+static struct q5v2audio_mi2s_ops default_audio_ops;
+static struct q5v2audio_mi2s_ops *audio_ops = &default_audio_ops;
 
 static int snddev_mi2s_open_tx(struct msm_snddev_info *dev_info)
 {
@@ -129,13 +136,12 @@ static int snddev_mi2s_open(struct msm_snddev_info *dev_info)
 	int rc = 0;
 	struct snddev_mi2s_drv_state *drv = &snddev_mi2s_drv;
 	u32 dir;
-	struct snddev_mi2s_data *snddev_mi2s_data = dev_info->private_data;
-
+	struct snddev_mi2s_data *snddev_mi2s_data;
 	if (!dev_info) {
 		MM_ERR("%s:  msm_snddev_info is null \n", __func__);
 		return -EINVAL;
 	}
-
+	snddev_mi2s_data = dev_info->private_data;
 	mutex_lock(&drv->lock);
 
 	if (drv->sd_lines_used & snddev_mi2s_data->sd_lines) {
@@ -144,10 +150,9 @@ static int snddev_mi2s_open(struct msm_snddev_info *dev_info)
 		mutex_unlock(&drv->lock);
 		return -EBUSY;
 	}
-
 	if (!drv->clocks_enabled) {
-
-		rc = mi2s_config_clk_gpio();
+		if (audio_ops->mi2s_clk_enable)
+			rc = audio_ops->mi2s_clk_enable(1);
 		if (rc) {
 			MM_ERR("%s: mi2s GPIO config failed for %s\n",
 			       __func__, snddev_mi2s_data->name);
@@ -164,7 +169,8 @@ static int snddev_mi2s_open(struct msm_snddev_info *dev_info)
 	if (snddev_mi2s_data->capability & SNDDEV_CAP_RX) {
 
 		dir = DIR_RX;
-		rc = mi2s_config_data_gpio(dir, snddev_mi2s_data->sd_lines);
+		if (audio_ops->mi2s_data_enable)
+			rc = audio_ops->mi2s_data_enable(1, dir, snddev_mi2s_data->sd_lines);
 
 		if (rc) {
 			rc = -EIO;
@@ -190,7 +196,8 @@ static int snddev_mi2s_open(struct msm_snddev_info *dev_info)
 
 	} else {
 		dir = DIR_TX;
-		rc = mi2s_config_data_gpio(dir, snddev_mi2s_data->sd_lines);
+		if (audio_ops->mi2s_data_enable)
+			rc = audio_ops->mi2s_data_enable(1, dir, snddev_mi2s_data->sd_lines);
 
 		if (rc) {
 			rc = -EIO;
@@ -217,7 +224,8 @@ static int snddev_mi2s_open(struct msm_snddev_info *dev_info)
 	return 0;
 
 mi2s_cleanup_open:
-	mi2s_unconfig_data_gpio(dir, snddev_mi2s_data->sd_lines);
+	if (audio_ops->mi2s_data_enable)
+		audio_ops->mi2s_data_enable(0, dir, snddev_mi2s_data->sd_lines);
 
 	/* Disable audio path */
 	if (snddev_mi2s_data->deroute)
@@ -228,7 +236,9 @@ mi2s_data_gpio_failure:
 		clk_disable(drv->sclk);
 		clk_disable(drv->mclk);
 		drv->clocks_enabled = 0;
-		mi2s_unconfig_clk_gpio();
+		if (audio_ops->mi2s_clk_enable)
+			audio_ops->mi2s_clk_enable(0);
+
 	}
 	mutex_unlock(&drv->lock);
 	return rc;
@@ -238,13 +248,13 @@ static int snddev_mi2s_close(struct msm_snddev_info *dev_info)
 {
 	struct snddev_mi2s_drv_state *drv = &snddev_mi2s_drv;
 	int dir;
-	struct snddev_mi2s_data *snddev_mi2s_data = dev_info->private_data;
+	struct snddev_mi2s_data *snddev_mi2s_data;
 
 	if (!dev_info) {
 		MM_ERR("%s:  msm_snddev_info is null \n", __func__);
 		return -EINVAL;
 	}
-
+	snddev_mi2s_data = dev_info->private_data;
 	if (!dev_info->opened) {
 		MM_ERR(" %s: calling close device with out opening the"
 		       " device \n", __func__);
@@ -264,14 +274,15 @@ static int snddev_mi2s_close(struct msm_snddev_info *dev_info)
 		dir = DIR_TX;
 		afe_disable(AFE_HW_PATH_MI2S_TX);
 	}
-
-	mi2s_unconfig_data_gpio(dir, snddev_mi2s_data->sd_lines);
+	if (audio_ops->mi2s_data_enable)
+		audio_ops->mi2s_data_enable(0, dir, snddev_mi2s_data->sd_lines);
 
 	if (!drv->sd_lines_used) {
 		clk_disable(drv->sclk);
 		clk_disable(drv->mclk);
 		drv->clocks_enabled = 0;
-		mi2s_unconfig_clk_gpio();
+		if (audio_ops->mi2s_clk_enable)
+			audio_ops->mi2s_clk_enable(0);
 	}
 
 	/* Disable audio path */
@@ -332,6 +343,11 @@ static int snddev_mi2s_probe(struct platform_device *pdev)
 
 	MM_DBG("%s: probe done for %s\n", __func__, pdata->name);
 	return rc;
+}
+
+void htc_7x30_register_mi2s_ops(struct q5v2audio_mi2s_ops *ops)
+{
+	audio_ops = ops;
 }
 
 static int snddev_mi2s_remove(struct platform_device *pdev)

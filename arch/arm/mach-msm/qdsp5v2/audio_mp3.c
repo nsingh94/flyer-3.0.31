@@ -2,7 +2,7 @@
  *
  * Copyright (C) 2008 Google, Inc.
  * Copyright (C) 2008 HTC Corporation
- * Copyright (c) 2009-2011, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2009-2010, Code Aurora Forum. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -15,9 +15,7 @@
  *
  */
 
-#include <asm/atomic.h>
-#include <asm/ioctls.h>
-
+#include <linux/version.h>
 #include <linux/module.h>
 #include <linux/fs.h>
 #include <linux/miscdevice.h>
@@ -31,21 +29,19 @@
 #include <linux/list.h>
 #include <linux/android_pmem.h>
 #include <linux/slab.h>
-#include <linux/memory_alloc.h>
-#include <linux/msm_audio.h>
+#include <asm/atomic.h>
+#include <asm/ioctls.h>
 #include <mach/msm_adsp.h>
 
-#include <mach/iommu.h>
-#include <mach/iommu_domains.h>
-#include <mach/msm_subsystem_map.h>
+#include <linux/msm_audio.h>
 #include <mach/qdsp5v2/audio_dev_ctl.h>
+
 #include <mach/qdsp5v2/qdsp5audppmsg.h>
 #include <mach/qdsp5v2/qdsp5audplaycmdi.h>
 #include <mach/qdsp5v2/qdsp5audplaymsg.h>
 #include <mach/qdsp5v2/audio_dev_ctl.h>
 #include <mach/qdsp5v2/audpp.h>
 #include <mach/debug_mm.h>
-#include <mach/msm_memtypes.h>
 
 #define ADRV_STATUS_AIO_INTF 0x00000001
 #define ADRV_STATUS_OBUF_GIVEN 0x00000002
@@ -197,8 +193,6 @@ struct audio {
 	/* data allocated for various buffers */
 	char *data;
 	int32_t phys; /* physical address of write buffer */
-	struct msm_mapped_buffer *map_v_read;
-	struct msm_mapped_buffer *map_v_write;
 
 	uint32_t drv_status;
 	int mfield; /* meta field embedded in data */
@@ -1078,8 +1072,12 @@ static long audmp3_process_event_req(struct audio *audio, void __user *arg)
 		usr_evt.event_type = drv_evt->event_type;
 		usr_evt.event_payload = drv_evt->payload;
 		list_add_tail(&drv_evt->list, &audio->free_event_queue);
-	} else
-		rc = -1;
+	} else {
+		MM_ERR("%s: fail to find event\n", __func__);
+		spin_unlock_irqrestore(&audio->event_queue_lock, flags);
+		return -1;
+	}
+
 	spin_unlock_irqrestore(&audio->event_queue_lock, flags);
 
 	if (drv_evt->event_type == AUDIO_EVENT_WRITE_DONE ||
@@ -1599,32 +1597,25 @@ static long audio_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 				MM_DBG("allocate PCM buffer %d\n",
 					config.buffer_count *
 					config.buffer_size);
-				audio->read_phys =
-					allocate_contiguous_ebi_nomap(
+				audio->read_phys = pmem_kalloc(
 							config.buffer_size *
 							config.buffer_count,
-							SZ_4K);
-				if (!audio->read_phys) {
+							PMEM_MEMTYPE_EBI1|
+							PMEM_ALIGNMENT_4K);
+				if (IS_ERR((void *)audio->read_phys)) {
 					rc = -ENOMEM;
 					break;
 				}
-				audio->map_v_read = msm_subsystem_map_buffer(
-							audio->read_phys,
+				audio->read_data = ioremap(audio->read_phys,
 							config.buffer_size *
-							config.buffer_count,
-							MSM_SUBSYSTEM_MAP_KADDR
-							, NULL, 0);
-				if (IS_ERR(audio->map_v_read)) {
-					MM_ERR("failed to map read buffer"
-							" physical address\n");
+							config.buffer_count);
+				if (!audio->read_data) {
+					MM_ERR("malloc read buf failed\n");
 					rc = -ENOMEM;
-					free_contiguous_memory_by_paddr(
-							audio->read_phys);
+					pmem_kfree(audio->read_phys);
 				} else {
 					uint8_t index;
 					uint32_t offset = 0;
-					audio->read_data =
-						audio->map_v_read->vaddr;
 					audio->buf_refresh = 0;
 					audio->pcm_buf_count =
 					    config.buffer_count;
@@ -2144,12 +2135,12 @@ static int audio_release(struct inode *inode, struct file *file)
 	wake_up(&audio->event_wait);
 	audmp3_reset_event_queue(audio);
 	if (audio->data) {
-		msm_subsystem_unmap_buffer(audio->map_v_write);
-		free_contiguous_memory_by_paddr(audio->phys);
+		iounmap(audio->data);
+		pmem_kfree(audio->phys);
 	}
 	if (audio->read_data) {
-		msm_subsystem_unmap_buffer(audio->map_v_read);
-		free_contiguous_memory_by_paddr(audio->read_phys);
+		iounmap(audio->read_data);
+		pmem_kfree(audio->read_phys);
 	}
 	mutex_unlock(&audio->lock);
 #ifdef CONFIG_DEBUG_FS
@@ -2337,7 +2328,7 @@ static int audio_open(struct inode *inode, struct file *file)
 
 	/* AIO interface */
 	if (file->f_flags & O_NONBLOCK) {
-		MM_DBG("set to aio interface\n");
+		MM_DBG("set to aio interface \n");
 		audio->drv_status |= ADRV_STATUS_AIO_INTF;
 		audio->drv_ops.pcm_buf_update = audmp3_async_pcm_buf_update;
 		audio->drv_ops.buffer_refresh = audmp3_async_buffer_refresh;
@@ -2346,28 +2337,23 @@ static int audio_open(struct inode *inode, struct file *file)
 		audio->drv_ops.in_flush = audmp3_async_flush_pcm_buf;
 		audio->drv_ops.fsync = audmp3_async_fsync;
 	} else {
-		MM_DBG("set to std io interface\n");
+		MM_DBG("set to std io interface \n");
 		while (pmem_sz >= DMASZ_MIN) {
-			MM_DBG("pmemsz = %d\n", pmem_sz);
-			audio->phys = allocate_contiguous_ebi_nomap(pmem_sz,
-									SZ_4K);
-			if (audio->phys) {
-				audio->map_v_write = msm_subsystem_map_buffer(
-							audio->phys, pmem_sz,
-							MSM_SUBSYSTEM_MAP_KADDR
-							, NULL, 0);
-				if (IS_ERR(audio->map_v_write)) {
-					MM_ERR("failed to map write physical"
-						" address , freeing instance"
-						"0x%08x\n", (int)audio);
+			MM_DBG("pmemsz = %d \n", pmem_sz);
+			audio->phys = pmem_kalloc(pmem_sz, PMEM_MEMTYPE_EBI1|
+						PMEM_ALIGNMENT_4K);
+			if (!IS_ERR((void *)audio->phys)) {
+				audio->data = ioremap(audio->phys, pmem_sz);
+				if (!audio->data) {
+					MM_ERR("could not allocate write \
+						buffers, freeing instance \
+						0x%08x\n", (int)audio);
 					rc = -ENOMEM;
-					free_contiguous_memory_by_paddr(
-								audio->phys);
+					pmem_kfree(audio->phys);
 					audpp_adec_free(audio->dec_id);
 					kfree(audio);
 					goto done;
 				}
-				audio->data = audio->map_v_write->vaddr;
 				MM_DBG("write buf: phy addr 0x%08x kernel addr\
 					0x%08x\n", audio->phys,\
 					(int)audio->data);
@@ -2484,8 +2470,8 @@ event_err:
 	msm_adsp_put(audio->audplay);
 err:
 	if (audio->data) {
-		msm_subsystem_unmap_buffer(audio->map_v_write);
-		free_contiguous_memory_by_paddr(audio->phys);
+		iounmap(audio->data);
+		pmem_kfree(audio->phys);
 	}
 	audpp_adec_free(audio->dec_id);
 	kfree(audio);
