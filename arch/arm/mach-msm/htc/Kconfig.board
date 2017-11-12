@@ -1,0 +1,10 @@
+#
+# Include the specific Kconfig file for HTC board
+#
+
+# FLYER
+source "arch/arm/mach-msm/htc/flyer/Kconfig"
+
+config MACH_HTC_DUMMY
+       depends on MACH_HTC
+       bool "NONE (No device)"

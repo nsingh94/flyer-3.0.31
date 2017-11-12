@@ -145,8 +145,12 @@ again:
 	case PCOM_RESET_CHIP:
 	case PCOM_RESET_CHIP_IMM:
 	case PCOM_RESET_APPS:
+#if CONFIG_MACH_HTC
+		/* Do not disable proc_comm when device reset */
+#else
 		msm_proc_comm_disable = 1;
 		printk(KERN_ERR "msm: proc_comm: proc comm disabled\n");
+#endif
 		break;
 	}
 end:

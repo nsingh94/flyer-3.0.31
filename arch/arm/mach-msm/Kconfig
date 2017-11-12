@@ -42,21 +42,21 @@ config ARCH_MSM7X30
 	select MSM_VIC
 	select CPU_V7
 	select MSM_REMOTE_SPINLOCK_DEKKERS
-	select ARCH_SPARSEMEM_ENABLE
+	select ARCH_SPARSEMEM_ENABLE if !MACH_HTC
 	select ARCH_HAS_HOLES_MEMORYMODEL
-	select MEMORY_HOTPLUG
-	select MEMORY_HOTREMOVE
-	select ARCH_ENABLE_MEMORY_HOTPLUG
-	select ARCH_ENABLE_MEMORY_HOTREMOVE
+	select MEMORY_HOTPLUG if !MACH_HTC
+	select MEMORY_HOTREMOVE if !MACH_HTC
+	select ARCH_ENABLE_MEMORY_HOTPLUG if !MACH_HTC
+	select ARCH_ENABLE_MEMORY_HOTREMOVE if !MACH_HTC
 	select MIGRATION
-	select ARCH_MEMORY_PROBE
-	select ARCH_MEMORY_REMOVE
+	select ARCH_MEMORY_PROBE if !MACH_HTC
+	select ARCH_MEMORY_REMOVE if !MACH_HTC
 	select MSM_GPIOMUX
 	select RESERVE_FIRST_PAGE
 	select MSM_DALRPC
 	select MSM_SPM_V1
 	select REGULATOR
-	select MSM_PROC_COMM_REGULATOR
+	select MSM_PROC_COMM_REGULATOR if !MACH_HTC
 	select MULTI_IRQ_HANDLER
 	select MSM_PM2 if PM
 
@@ -741,6 +741,7 @@ config MSM_STACKED_MEMORY
 	  memory.  When present this memory bank is used for a high speed
 	  shared memory interface.  When not present regular RAM is used.
 
+if !MACH_HTC
 config PHYS_OFFSET
 	hex
 	default "0x40800000" if ARCH_MSM9615
@@ -754,6 +755,11 @@ config PHYS_OFFSET
 	default "0x20000000" if ARCH_QSD8X50
 	default "0x40200000" if ARCH_MSM8X60
 	default "0x10000000"
+endif
+
+if MACH_HTC
+source "arch/arm/mach-msm/htc/Kconfig.offsets"
+endif
 
 config KERNEL_PMEM_EBI_REGION
 	bool "Enable in-kernel PMEM region for EBI"
@@ -781,6 +787,7 @@ config MSM_AMSS_VERSION
 	default 6210 if MSM_AMSS_VERSION_6210
 	default 6220 if MSM_AMSS_VERSION_6220
 	default 6225 if MSM_AMSS_VERSION_6225
+	default 1200 if MSM_AMSS_VERSION_1200
 
 choice
 	prompt "AMSS modem firmware version"
@@ -795,6 +802,9 @@ choice
 
 	config MSM_AMSS_VERSION_6225
 		bool "6.2.20 + New ADSP"
+
+	config MSM_AMSS_VERSION_1200
+		bool "1.2.00"
 endchoice
 
 config MSM_HAS_DEBUG_UART_HS
@@ -2173,5 +2183,7 @@ config MSM_CPU_PWRCTL
 	  Droop detector mechanism can adversely affect krait plls during
 	  stand alone power collapse operation. Selecting this option
 	  ensures that they are always off.
+
+source "arch/arm/mach-msm/htc/Kconfig"
 
 endif

@@ -43,7 +43,11 @@ obj-$(CONFIG_TWL4030_MADC)      += twl4030-madc.o
 obj-$(CONFIG_TWL4030_POWER)    += twl4030-power.o
 obj-$(CONFIG_MFD_TWL4030_AUDIO)	+= twl4030-audio.o
 
+ifdef CONFIG_MACH_HTC
+obj-$(CONFIG_MARIMBA_CORE)	+= marimba-core_htc.o
+else
 obj-$(CONFIG_MARIMBA_CORE)	+= marimba-core.o
+endif
 obj-$(CONFIG_MARIMBA_TSADC)	+= marimba-tsadc.o
 obj-$(CONFIG_TPS65023)		+= tps65023.o
 
@@ -52,7 +56,11 @@ obj-$(CONFIG_TIMPANI_CODEC)	+= timpani-codec.o
 ifdef CONFIG_TIMPANI_CODEC
 obj-$(CONFIG_TIMPANI_CODEC) += msm-adie-codec.o
 else ifdef CONFIG_MARIMBA_CODEC
+ifdef CONFIG_MACH_HTC
+obj-$(CONFIG_MARIMBA_CODEC) += msm-adie-codec_htc.o
+else
 obj-$(CONFIG_MARIMBA_CODEC) += msm-adie-codec.o
+endif
 endif
 
 obj-$(CONFIG_TWL6030_PWM)	+= twl6030-pwm.o

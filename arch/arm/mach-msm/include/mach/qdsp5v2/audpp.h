@@ -1,7 +1,7 @@
 /*arch/arm/mach-msm/qdsp5iv2/audpp.h
  *
  * Copyright (C) 2008 Google, Inc.
- * Copyright (c) 2008-2011, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2008-2010, Code Aurora Forum. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -48,8 +48,7 @@ typedef void (*audpp_event_func)(void *private, unsigned id, uint16_t *msg);
 			AUDPP_CMD_CFG_DEV_MIXER_DEV_1 | \
 			AUDPP_CMD_CFG_DEV_MIXER_DEV_2 | \
 			AUDPP_CMD_CFG_DEV_MIXER_DEV_3)
-#define AUDPP_MIXER_UPLINK_RX		AUDPP_CMD_CFG_DEV_MIXER_DEV_5
-#define AUDPP_MAX_COPP_DEVICES		6
+#define AUDPP_MAX_COPP_DEVICES		5
 
 enum obj_type {
 	COPP,
@@ -95,15 +94,6 @@ int audpp_restore_avsync(int id, uint16_t *avsync);
 int audpp_dsp_set_eq(unsigned id, unsigned enable,
 	struct audpp_cmd_cfg_object_params_eqalizer *eq,
 			enum obj_type objtype);
-
-int audpp_dsp_set_spa(unsigned id,
-	struct audpp_cmd_cfg_object_params_spectram *spa,
-			enum obj_type objtype);
-
-int audpp_dsp_set_stf(unsigned id, unsigned enable,
-     struct audpp_cmd_cfg_object_params_sidechain *stf,
-			enum obj_type objtype);
-
 int audpp_dsp_set_vol_pan(unsigned id,
 	struct audpp_cmd_cfg_object_params_volume *vol_pan,
 			enum obj_type objtype);

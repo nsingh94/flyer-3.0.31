@@ -39,17 +39,30 @@
 */
 
 #if defined(CONFIG_ARCH_MSM7X30)
-
+#ifndef __ASSEMBLY__
 #define EBI0_PHYS_OFFSET PHYS_OFFSET
 #define EBI0_PAGE_OFFSET PAGE_OFFSET
+#ifdef CONFIG_MACH_HTC
+extern unsigned int ebi0_size;
+#else
 #define EBI0_SIZE 0x10000000
+#endif
 
-#ifndef __ASSEMBLY__
 
+
+#ifdef CONFIG_MACH_HTC
+#define EBI1_PHYS_OFFSET 0x40000000
+#else
 extern unsigned long ebi1_phys_offset;
 
 #define EBI1_PHYS_OFFSET (ebi1_phys_offset)
+#endif
+
+#ifdef CONFIG_MACH_HTC
+#define EBI1_PAGE_OFFSET (EBI0_PAGE_OFFSET + ebi0_size)
+#else
 #define EBI1_PAGE_OFFSET (EBI0_PAGE_OFFSET + EBI0_SIZE)
+#endif
 
 #if (defined(CONFIG_SPARSEMEM) && defined(CONFIG_VMSPLIT_3G))
 

@@ -352,4 +352,9 @@ config PM8921_BMS
 	help
 	  Say Y here to enable support for pm8921 chip bms subdevice
 
+config BATTERY_DS2746
+        tristate "DS2746 battery driver "
+        help
+          Say Y here to enable support for batteries with ds2746 chip.
+
 endif # POWER_SUPPLY

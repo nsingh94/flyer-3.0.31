@@ -21,7 +21,11 @@
 #include <linux/types.h>
 #include <linux/usb/otg.h>
 #include <linux/wakelock.h>
-#include <linux/pm_qos_params.h>
+#ifdef CONFIG_MACH_HTC
+#include <mach/board.h>
+#include <mach/msm_xo.h>
+#endif
+#include <linux/pm_qos.h>
 
 /**
  * Supported USB modes
@@ -181,6 +185,17 @@ struct msm_otg_platform_data {
 	u32 swfi_latency;
 	bool enable_dcd;
 	struct msm_bus_scale_pdata *bus_scale_table;
+#ifdef CONFIG_MACH_HTC
+	char *ldo_3v3_name;
+	char *ldo_1v8_name;
+	char *vddcx_name;
+	/* This flag is against the condition that PHY fail into lpm when DCP is attached. */
+	int reset_phy_before_lpm;
+	bool phy_notify_enabled;
+	void (*usb_uart_switch)(int uart);
+	int (*rpc_connect)(int connect);
+	int (*phy_reset)(void);
+#endif
 };
 
 /**
@@ -267,8 +282,20 @@ struct msm_otg {
 #define PHY_PWR_COLLAPSED		BIT(0)
 #define PHY_RETENTIONED			BIT(1)
 #define PHY_OTG_COMP_DISABLED		BIT(2)
-	struct pm_qos_request_list pm_qos_req_dma;
+	struct pm_qos_request pm_qos_req_dma;
 	int reset_counter;
+#ifdef CONFIG_MACH_HTC
+	struct wake_lock usb_otg_wlock;
+	struct wake_lock cable_detect_wlock;
+	struct work_struct notifier_work;
+	enum usb_connect_type connect_type;
+	int connect_type_ready;
+	struct workqueue_struct *usb_wq;
+	struct timer_list ac_detect_timer;
+	int ac_detect_count;
+	int reset_phy_before_lpm;
+	void (*vbus_notification_cb)(int online);
+#endif
 };
 
 struct msm_hsic_host_platform_data {

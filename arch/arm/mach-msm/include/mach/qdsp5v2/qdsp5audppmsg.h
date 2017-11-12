@@ -14,7 +14,7 @@ REFERENCES
 EXTERNALIZED FUNCTIONS
   None
 
-Copyright (c) 1992-2009, The Linux Foundation. All rights reserved.
+Copyright (c) 1992-2009, Code Aurora Forum. All rights reserved.
 
 This software is licensed under the terms of the GNU General Public
 License version 2, as published by the Free Software Foundation, and
@@ -37,8 +37,6 @@ GNU General Public License for more details.
 /*
  * MSG to Informs the ARM os Success/Failure of bringing up the decoder
  */
-
-#define AUDPP_MSG_FEAT_QUERY_DM_DONE 0x000b
 
 #define AUDPP_MSG_STATUS_MSG		0x0001
 #define AUDPP_MSG_STATUS_MSG_LEN	\

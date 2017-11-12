@@ -300,10 +300,11 @@ obj-$(CONFIG_NETCONSOLE) += netconsole.o
 obj-$(CONFIG_FS_ENET) += fs_enet/
 
 obj-$(CONFIG_NETXEN_NIC) += netxen/
-
+ifeq ($(CONFIG_MACH_HTC),n)
 obj-$(CONFIG_MSM_RMNET) += msm_rmnet.o
 obj-$(CONFIG_MSM_RMNET_SDIO) += msm_rmnet_sdio.o
 obj-$(CONFIG_MSM_RMNET_BAM) += msm_rmnet_bam.o
+endif
 
 obj-$(CONFIG_NIU) += niu.o
 obj-$(CONFIG_VIRTIO_NET) += virtio_net.o

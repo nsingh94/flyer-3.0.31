@@ -1,13 +1,29 @@
-/* Copyright (c) 2009-2011, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2009-2010, Code Aurora Forum. All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 and
- * only version 2 as published by the Free Software Foundation.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ *     * Redistributions of source code must retain the above copyright
+ *       notice, this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above
+ *       copyright notice, this list of conditions and the following
+ *       disclaimer in the documentation and/or other materials provided
+ *       with the distribution.
+ *     * Neither the name of Code Aurora Forum, Inc. nor the names of its
+ *       contributors may be used to endorse or promote products derived
+ *       from this software without specific prior written permission.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS
+ * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+ * BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+ * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+ * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
 
@@ -25,7 +41,6 @@
 #define MSM_ADSP_ENC_CODEC_AMRNB 3
 #define MSM_ADSP_ENC_CODEC_EVRC 4
 #define MSM_ADSP_ENC_CODEC_QCELP 5
-#define MSM_ADSP_ENC_CODEC_EXT_WAV (15)
 
 #define MSM_ADSP_ENC_MODE_TUNNEL 24
 #define MSM_ADSP_ENC_MODE_NON_TUNNEL 25
@@ -47,11 +62,6 @@ struct audpreproc_event_callback {
 	void *private;
 };
 
-/*holds audrec information*/
-struct audrec_session_info {
-	int session_id;
-	int sampling_freq;
-};
 
 /* Exported common api's from audpreproc layer */
 int audpreproc_aenc_alloc(unsigned enc_type, const char **module_name,
@@ -80,17 +90,10 @@ int audpreproc_dsp_set_agc(struct audpreproc_cmd_cfg_agc_params *agc,
 int audpreproc_dsp_set_iir(
 struct audpreproc_cmd_cfg_iir_tuning_filter_params *iir, unsigned int len);
 
-int audpreproc_update_audrec_info(struct audrec_session_info
-						*audrec_session_info);
 int audpreproc_unregister_event_callback(struct audpreproc_event_callback *ecb);
 
 int audpreproc_register_event_callback(struct audpreproc_event_callback *ecb);
 
 int audpreproc_dsp_set_gain_tx(
 	struct audpreproc_cmd_cfg_cal_gain *calib_gain_tx, unsigned len);
-
-void get_audrec_session_info(int id, struct audrec_session_info *info);
-
-int audpreproc_dsp_set_lvnv(
-	struct audpreproc_cmd_cfg_lvnv_param *preproc_lvnv, unsigned len);
 #endif /* _MACH_QDSP5_V2_AUDPREPROC_H */

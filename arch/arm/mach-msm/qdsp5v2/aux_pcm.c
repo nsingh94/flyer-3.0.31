@@ -1,4 +1,4 @@
-/* Copyright (c) 2009-2011, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2009-2010, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -9,6 +9,11 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+ * 02110-1301, USA.
+ *
  */
 #include <linux/module.h>
 #include <linux/mutex.h>
@@ -17,6 +22,7 @@
 #include <linux/err.h>
 #include <mach/qdsp5v2/aux_pcm.h>
 #include <mach/gpio.h>
+#include "../proc_comm.h"
 #include <linux/delay.h>
 #include <mach/debug_mm.h>
 
@@ -83,7 +89,7 @@ void aux_codec_adsp_codec_ctl_en(bool msm_adsp_en)
 			baddr + AUX_CODEC_CTL_OFFSET);
 		}
 	}
-	mb();
+
 }
 
 /* Set who control aux pcm path: adsp or MSM */
@@ -106,7 +112,7 @@ void aux_codec_pcm_path_ctl_en(bool msm_adsp_en)
 			baddr + PCM_PATH_CTL_OFFSET);
 		}
 	}
-	mb();
+
 	return;
 }
 EXPORT_SYMBOL(aux_codec_pcm_path_ctl_en);
@@ -161,10 +167,12 @@ void aux_pcm_gpios_free(void)
 	 */
 	gpio_tlmm_config(GPIO_CFG(the_aux_pcm_state.dout, 0, GPIO_CFG_OUTPUT,
 		GPIO_CFG_NO_PULL, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
+
 	gpio_set_value(the_aux_pcm_state.dout, 0);
 	msleep(20);
 	gpio_tlmm_config(GPIO_CFG(the_aux_pcm_state.dout, 1, GPIO_CFG_OUTPUT,
 		GPIO_CFG_NO_PULL, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
+
 
 	gpio_free(the_aux_pcm_state.dout);
 	gpio_free(the_aux_pcm_state.din);
@@ -221,6 +229,7 @@ static int get_aux_pcm_gpios(struct platform_device *pdev)
 static int aux_pcm_probe(struct platform_device *pdev)
 {
 	int rc = 0;
+	int diff  = 0;
 	struct resource *mem_src;
 
 	MM_DBG("aux_pcm_probe \n");
@@ -230,9 +239,9 @@ static int aux_pcm_probe(struct platform_device *pdev)
 		rc = -ENODEV;
 		goto done;
 	}
-
+	diff = mem_src->end -mem_src->start;
 	the_aux_pcm_state.aux_pcm_base = ioremap(mem_src->start,
-		(mem_src->end - mem_src->start) + 1);
+		diff + 1);
 	if (!the_aux_pcm_state.aux_pcm_base) {
 		rc = -ENOMEM;
 		goto done;

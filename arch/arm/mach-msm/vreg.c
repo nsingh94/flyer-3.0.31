@@ -29,6 +29,10 @@
 
 #include "proc_comm.h"
 
+#ifndef MSM_PROC_COMM_REGULATOR
+#include "htc/include/vreg.c"
+#else //MSM_PROC_COMM_REGULATOR
+
 #if defined(CONFIG_MSM_VREG_SWITCH_INVERTED)
 #define VREG_SWITCH_ENABLE 0
 #define VREG_SWITCH_DISABLE 1
@@ -323,3 +327,4 @@ module_exit(vreg_exit);
 MODULE_LICENSE("GPL v2");
 MODULE_DESCRIPTION("vreg.c regulator shim");
 MODULE_VERSION("1.0");
+#endif //MSM_PROC_COMM_REGULATOR

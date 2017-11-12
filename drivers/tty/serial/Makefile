@@ -74,10 +74,18 @@ obj-$(CONFIG_SERIAL_SGI_IOC4) += ioc4_serial.o
 obj-$(CONFIG_SERIAL_SGI_IOC3) += ioc3_serial.o
 obj-$(CONFIG_SERIAL_ATMEL) += atmel_serial.o
 obj-$(CONFIG_SERIAL_UARTLITE) += uartlite.o
+ifeq ($(CONFIG_MACH_HTC),y)
+obj-$(CONFIG_SERIAL_MSM) += msm_serial_htc.o
+obj-$(CONFIG_SERIAL_MSM_HS) += msm_serial_hs_htc.o
+obj-$(CONFIG_SERIAL_MSM_HS) += msm_serial_hs_brcm_htc.o
+obj-$(CONFIG_SERIAL_MSM_HS) += msm_serial_hs_ti_dc_htc.o
+else
 obj-$(CONFIG_SERIAL_MSM) += msm_serial.o
 obj-$(CONFIG_SERIAL_MSM_HS) += msm_serial_hs.o
+endif
 obj-$(CONFIG_SERIAL_MSM_HSL) += msm_serial_hs_lite.o
 obj-$(CONFIG_MSM_SERIAL_DEBUGGER) += msm_serial_debugger.o
+obj-$(CONFIG_SERIAL_BCM_BT_LPM) += bcm_bt_lpm.o
 obj-$(CONFIG_SERIAL_NETX) += netx-serial.o
 obj-$(CONFIG_SERIAL_OF_PLATFORM) += of_serial.o
 obj-$(CONFIG_SERIAL_OF_PLATFORM_NWPSERIAL) += nwpserial.o

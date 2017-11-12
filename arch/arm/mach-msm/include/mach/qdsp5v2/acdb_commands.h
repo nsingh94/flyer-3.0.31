@@ -1,13 +1,29 @@
-/* Copyright (c) 2009-2011, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2009-2010, Code Aurora Forum. All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 and
- * only version 2 as published by the Free Software Foundation.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ *     * Redistributions of source code must retain the above copyright
+ *       notice, this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above
+ *       copyright notice, this list of conditions and the following
+ *       disclaimer in the documentation and/or other materials provided
+ *       with the distribution.
+ *     * Neither the name of Code Aurora Forum, Inc. nor the names of its
+ *       contributors may be used to endorse or promote products derived
+ *       from this software without specific prior written permission.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS
+ * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+ * BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+ * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+ * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
 #ifndef _MACH_QDSP5_V2_ACDB_COMMANDS_H
@@ -53,14 +69,12 @@
 /* struct acdb_cmd_get_device_info */
 #define ACDB_GET_DEVICE_INFO		0x0108f5cb
 
-/*command to intitialize ACDB based on codec type*/
-#define ACDB_CMD_INITIALIZE_FOR_ADIE	0x00011283
 
 
 /* ACDB Error codes */
 
 #define ACDB_RES_SUCCESS		0
-#define ACDB_RES_FAILURE		-1
+#define ACDB_RES_FAILURE		1
 #define ACDB_RES_BADPARM		-2
 #define ACDB_RES_BADSTATE		-3
 
@@ -145,9 +159,6 @@
 #define ABID_AUDIO_CALIBRATION_GAIN_RX  0x00011162
 #define ABID_AUDIO_CALIBRATION_GAIN_TX  0x00011149
 #define ABID_AUDIO_PBE_RX               0x00011197
-#define ABID_AUDIO_RMC_TX		0x00011226
-#define ABID_AUDIO_FLUENCE_TX		0x00011244
-
 
 #define IID_AUDIO_AGC_PARAMETERS	0x0001007E
 #define IID_NS_PARAMETERS		0x00010072
@@ -162,8 +173,6 @@
 #define IID_AUDIO_CALIBRATION_GAIN_TX   0x00011171
 #define IID_PBE_CONFIG_PARAMETERS       0x00011198
 #define IID_AUDIO_PBE_RX_ENABLE_FLAG    0x00011199
-#define IID_AUDIO_RMC_PARAM		0x00011227
-#define IID_AUDIO_FLUENCE_TX		0x00011245
 
 
 #define TOPID_RX_TOPOLOGY_1		0x00010062
@@ -248,16 +257,7 @@ struct acdb_dev_info {
 	s32	max_volume;		/* Max volume (mB) */
 };
 
-/*structure is used to intialize ACDB software on modem
-based on adie type detected*/
-struct acdb_cmd_init_adie {
-    u32 command_id;
-    u32 adie_type;
-};
 
-#define ACDB_CURRENT_ADIE_MODE_UNKNOWN 0
-#define ACDB_CURRENT_ADIE_MODE_TIMPANI 1
-#define ACDB_CURRENT_ADIE_MODE_MARIMBA 2
 
 /* Sample Rate Bit Mask */
 
@@ -280,24 +280,6 @@ enum {
 	AUXPGA_DEVICE,
 	DEVICE_TYPE_MAX
 };
-
-#ifdef CONFIG_DEBUG_FS
-/*These are ABID used for RTC*/
-#define ABID_AUDIO_RTC_MBADRC_RX 0x0001118A
-#define ABID_AUDIO_RTC_VOLUME_PAN_RX 0x0001118C
-#define ABID_AUDIO_RTC_SPA 0x0001118E
-#define ABID_AUDIO_RTC_EQUALIZER_PARAMETERS 0x0001119F
-
-/*These are IID used for RTC*/
-#define IID_AUDIO_RTC_MBADRC_PARAMETERS 0x0001118B
-#define IID_AUDIO_RTC_VOLUME_PAN_PARAMETERS 0x0001118D
-#define IID_AUDIO_RTC_SPA_PARAMETERS 0x0001118F
-#define IID_AUDIO_RTC_EQUALIZER_PARAMETERS 0x0001119E
-#define IID_AUDIO_RTC_AGC_PARAMETERS 0x000111A7
-#define IID_AUDIO_RTC_TX_IIR_COEFF 0x000111A8
-
-#endif
-
 
 #endif
 
