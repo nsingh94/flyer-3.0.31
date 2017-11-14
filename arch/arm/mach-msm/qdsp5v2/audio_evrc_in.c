@@ -25,6 +25,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/msm_audio.h>
 #include <linux/msm_audio_qcp.h>
+#include <linux/android_pmem.h>
 
 #include <asm/atomic.h>
 #include <asm/ioctls.h>
@@ -182,7 +183,7 @@ static void evrc_in_listener(u32 evt_id, union auddev_evt_data *evt_payload,
 		break;
 	}
 	default:
-		MM_ERR("wrong event %d\n", evt_id);
+		pr_aud_err("wrong event %d\n", evt_id);
 		break;
 	}
 }
@@ -196,7 +197,7 @@ static void audpreproc_dsp_event(void *data, unsigned id,  void *msg)
 	case AUDPREPROC_ERROR_MSG: {
 		struct audpreproc_err_msg *err_msg = msg;
 
-		MM_ERR("ERROR_MSG: stream id %d err idx %d\n",
+		pr_aud_err("ERROR_MSG: stream id %d err idx %d\n",
 		err_msg->stream_id, err_msg->aud_preproc_err_idx);
 		/* Error case */
 		wake_up(&audio->wait_enable);
@@ -232,7 +233,7 @@ static void audpreproc_dsp_event(void *data, unsigned id,  void *msg)
 		break;
 	}
 	default:
-		MM_ERR("Unknown Event id %d\n", id);
+		pr_aud_err("Unknown Event id %d\n", id);
 	}
 }
 
@@ -256,7 +257,7 @@ static void audrec_dsp_event(void *data, unsigned id, size_t len,
 		struct audrec_fatal_err_msg fatal_err_msg;
 
 		getevent(&fatal_err_msg, AUDREC_FATAL_ERR_MSG_LEN);
-		MM_ERR("FATAL_ERR_MSG: err id %d\n",
+		pr_aud_err("FATAL_ERR_MSG: err id %d\n",
 				fatal_err_msg.audrec_err_id);
 		/* Error stop the encoder */
 		audio->stopped = 1;
@@ -278,7 +279,7 @@ static void audrec_dsp_event(void *data, unsigned id, size_t len,
 		break;
 	}
 	default:
-		MM_ERR("Unknown Event id %d\n", id);
+		pr_aud_err("Unknown Event id %d\n", id);
 	}
 }
 
@@ -305,7 +306,7 @@ static void audevrc_in_get_dsp_frames(struct audio_in *audio)
 	/* If overflow, move the tail index foward. */
 	if (audio->in_head == audio->in_tail) {
 		audio->in_tail = (audio->in_tail + 1) & (FRAME_NUM - 1);
-		MM_ERR("in_count = %d\n", audio->in_count);
+		pr_aud_err("in_count = %d\n", audio->in_count);
 	} else
 		audio->in_count++;
 
@@ -422,12 +423,12 @@ static int audevrc_in_enable(struct audio_in *audio)
 		return 0;
 
 	if (audpreproc_enable(audio->enc_id, &audpreproc_dsp_event, audio)) {
-		MM_ERR("msm_adsp_enable(audpreproc) failed\n");
+		pr_aud_err("msm_adsp_enable(audpreproc) failed\n");
 		return -ENODEV;
 	}
 
 	if (msm_adsp_enable(audio->audrec)) {
-		MM_ERR("msm_adsp_enable(audrec) failed\n");
+		pr_aud_err("msm_adsp_enable(audrec) failed\n");
 		audpreproc_disable(audio->enc_id, audio);
 		return -ENODEV;
 	}
@@ -583,20 +584,20 @@ static long audevrc_in_ioctl(struct file *file,
 				cfg.max_bit_rate, cfg.cdma_rate);
 		if (cfg.min_bit_rate > CDMA_RATE_FULL || \
 				 cfg.min_bit_rate < CDMA_RATE_EIGHTH) {
-			MM_ERR("invalid min bitrate\n");
+			pr_aud_err("invalid min bitrate\n");
 			rc = -EFAULT;
 			break;
 		}
 		if (cfg.max_bit_rate > CDMA_RATE_FULL || \
 				cfg.max_bit_rate < CDMA_RATE_EIGHTH) {
-			MM_ERR("invalid max bitrate\n");
+			pr_aud_err("invalid max bitrate\n");
 			rc = -EFAULT;
 			break;
 		}
 		/* Recording Does not support Erase and Blank */
 		if (cfg.cdma_rate > CDMA_RATE_FULL ||
 			cfg.cdma_rate < CDMA_RATE_EIGHTH) {
-			MM_ERR("invalid qcelp cdma rate\n");
+			pr_aud_err("invalid qcelp cdma rate\n");
 			rc = -EFAULT;
 			break;
 		}
@@ -613,7 +614,7 @@ static long audevrc_in_ioctl(struct file *file,
 		if (cfg.rec_mode != VOC_REC_BOTH &&
 			cfg.rec_mode != VOC_REC_UPLINK &&
 			cfg.rec_mode != VOC_REC_DOWNLINK) {
-			MM_ERR("invalid rec_mode\n");
+			pr_aud_err("invalid rec_mode\n");
 			rc = -EINVAL;
 			break;
 		} else {
@@ -699,7 +700,7 @@ static ssize_t audevrc_in_read(struct file *file,
 			count -= size;
 			buf += size;
 		} else {
-			MM_ERR("short read\n");
+			pr_aud_err("short read\n");
 			break;
 		}
 	}
@@ -735,6 +736,11 @@ static int audevrc_in_release(struct inode *inode, struct file *file)
 	audpreproc_aenc_free(audio->enc_id);
 	audio->audrec = NULL;
 	audio->opened = 0;
+	if (audio->data) {
+		iounmap(audio->data);
+		pmem_kfree(audio->phys);
+		audio->data = NULL;
+	}
 	mutex_unlock(&audio->lock);
 	return 0;
 }
@@ -751,10 +757,27 @@ static int audevrc_in_open(struct inode *inode, struct file *file)
 		rc = -EBUSY;
 		goto done;
 	}
+	audio->phys = pmem_kalloc(DMASZ, PMEM_MEMTYPE_EBI1|
+					PMEM_ALIGNMENT_4K);
+	if (!IS_ERR((void *)audio->phys)) {
+		audio->data = ioremap(audio->phys, DMASZ);
+		if (!audio->data) {
+			pr_aud_err("could not allocate DMA buffers\n");
+			rc = -ENOMEM;
+			pmem_kfree(audio->phys);
+			goto done;
+		}
+	} else {
+		pr_aud_err("could not allocate DMA buffers\n");
+		rc = -ENOMEM;
+		goto done;
+	}
+	MM_DBG("Memory addr = 0x%8x  phy addr = 0x%8x\n",\
+		(int) audio->data, (int) audio->phys);
 	if ((file->f_mode & FMODE_WRITE) &&
 			(file->f_mode & FMODE_READ)) {
 		rc = -EACCES;
-		MM_ERR("Non tunnel encoding is not supported\n");
+		pr_aud_err("Non tunnel encoding is not supported\n");
 		goto done;
 	} else if (!(file->f_mode & FMODE_WRITE) &&
 					(file->f_mode & FMODE_READ)) {
@@ -777,7 +800,7 @@ static int audevrc_in_open(struct inode *inode, struct file *file)
 	encid = audpreproc_aenc_alloc(audio->enc_type, &audio->module_name,
 			&audio->queue_ids);
 	if (encid < 0) {
-		MM_ERR("No free encoder available\n");
+		pr_aud_err("No free encoder available\n");
 		rc = -ENODEV;
 		goto done;
 	}
@@ -804,7 +827,7 @@ static int audevrc_in_open(struct inode *inode, struct file *file)
 					AUDDEV_CLNT_ENC, audio->enc_id,
 					evrc_in_listener, (void *) audio);
 	if (rc) {
-		MM_ERR("failed to register device event listener\n");
+		pr_aud_err("failed to register device event listener\n");
 		goto evt_error;
 	}
 	file->private_data = audio;
@@ -836,15 +859,6 @@ struct miscdevice audio_evrc_in_misc = {
 
 static int __init audevrc_in_init(void)
 {
-	the_audio_evrc_in.data = dma_alloc_coherent(NULL, DMASZ,
-				       &the_audio_evrc_in.phys, GFP_KERNEL);
-	MM_DBG("Memory addr = 0x%8x  Phy addr = 0x%8x ---- \n", \
-		(int) the_audio_evrc_in.data, (int) the_audio_evrc_in.phys);
-
-	if (!the_audio_evrc_in.data) {
-		MM_ERR("Unable to allocate DMA buffer\n");
-		return -ENOMEM;
-	}
 	mutex_init(&the_audio_evrc_in.lock);
 	mutex_init(&the_audio_evrc_in.read_lock);
 	spin_lock_init(&the_audio_evrc_in.dsp_lock);

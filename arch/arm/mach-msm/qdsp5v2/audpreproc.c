@@ -51,8 +51,6 @@ struct msm_adspenc_info {
 	(1<<MSM_ADSP_ENC_CODEC_AAC) | (1<<MSM_ADSP_ENC_CODEC_AMRNB) | \
 	(1<<MSM_ADSP_ENC_CODEC_EVRC) | (1<<MSM_ADSP_ENC_CODEC_QCELP))
 
-#define ENC2_FORMAT (1<<MSM_ADSP_ENC_CODEC_WAV)
-
 struct msm_adspenc_database {
 	unsigned num_enc;
 	struct msm_adspenc_info *enc_info_list;
@@ -69,11 +67,6 @@ static struct msm_adspenc_info enc_info_list[] = {
 			   QDSP_uPAudRec1CmdQueue), 1, \
 			 (ENC1_FORMAT | (1 << MSM_ADSP_ENC_MODE_TUNNEL) | \
 			  (1 << MSM_ADSP_ENC_MODE_NON_TUNNEL)), 5),
-
-	ENC_MODULE_INFO("AUDREC2TASK", \
-			 ((QDSP_uPAudRec2BitStreamQueue << 16)| \
-			   QDSP_uPAudRec2CmdQueue), 2, \
-			 (ENC2_FORMAT  | (1 << MSM_ADSP_ENC_MODE_TUNNEL)), 1),
 
 };
 
@@ -202,11 +195,11 @@ static void audpreproc_dsp_event(void *data, unsigned id, size_t len,
 		break;
 	}
 	case ADSP_MESSAGE_ID: {
-		MM_INFO("audpreproc: enable/disable done\n");
+		pr_aud_info("audpreproc: enable/disable done\n");
 		break;
 	}
 	default:
-		MM_INFO("Unknown Event %d\n", id);
+		pr_aud_info("Unknown Event %d\n", id);
 	}
 	return;
 }
@@ -239,7 +232,7 @@ int audpreproc_enable(int enc_id, audpreproc_event_func func, void *private)
 		res = msm_adsp_get("AUDPREPROCTASK", &audpreproc->mod,
 				&adsp_ops, audpreproc);
 		if (res < 0) {
-			MM_ERR("Can not get AUDPREPROCTASK\n");
+			pr_aud_err("Can not get AUDPREPROCTASK\n");
 			audpreproc->open_count = 0;
 			audpreproc->func[enc_id] = NULL;
 			audpreproc->private[enc_id] = NULL;
@@ -247,7 +240,7 @@ int audpreproc_enable(int enc_id, audpreproc_event_func func, void *private)
 		}
 		prevent_suspend();
 		if (msm_adsp_enable(audpreproc->mod)) {
-			MM_ERR("Can not enable AUDPREPROCTASK\n");
+			pr_aud_err("Can not enable AUDPREPROCTASK\n");
 			audpreproc->open_count = 0;
 			audpreproc->func[enc_id] = NULL;
 			audpreproc->private[enc_id] = NULL;
@@ -335,7 +328,6 @@ int audpreproc_aenc_alloc(unsigned enc_type, const char **module_name,
 {
 	struct audpreproc_state *audpreproc = &the_audpreproc_state;
 	int encid = -1, idx, lidx, mode, codec;
-	int codecs_supported, min_codecs_supported;
 	static int wakelock_init;
 
 	mutex_lock(audpreproc->lock);
@@ -344,7 +336,6 @@ int audpreproc_aenc_alloc(unsigned enc_type, const char **module_name,
 	codec = (1 << (enc_type & AUDPREPROC_CODEC_MASK));
 
 	lidx = msm_enc_database.num_enc;
-	min_codecs_supported = sizeof(unsigned int) * 8;
 	MM_DBG("mode = 0x%08x codec = 0x%08x\n", mode, codec);
 
 	for (idx = lidx-1; idx >= 0; idx--) {
@@ -354,15 +345,13 @@ int audpreproc_aenc_alloc(unsigned enc_type, const char **module_name,
 		== mode) && ((codec &
 		msm_enc_database.enc_info_list[idx].enc_formats)
 		== codec)){
-			/* Check supports minimum number codecs */
-			codecs_supported =
-			msm_enc_database.enc_info_list[idx].nr_codec_support;
-			if (codecs_supported < min_codecs_supported) {
-				lidx = idx;
-				min_codecs_supported = codecs_supported;
-			}
+			lidx = idx;
+			break;
 		}
 	}
+
+	/* hack for audio record */
+	lidx = 1;
 
 	if (lidx < msm_enc_database.num_enc) {
 		audpreproc->enc_inuse |= (1 << lidx);
